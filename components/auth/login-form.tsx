@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { useAuthStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, LogIn } from 'lucide-react';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 
 interface LoginFormProps {
   onSwitchToSignup: () => void;
@@ -25,7 +25,6 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
     setError('');
     setIsLoading(true);
 
-    // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     const success = login(userId, password);
@@ -54,31 +53,33 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
             </Alert>
           )}
           
-          <div className="space-y-2">
-            <Label htmlFor="userId" className="text-foreground">아이디</Label>
-            <Input
-              id="userId"
-              type="text"
-              placeholder="아이디를 입력하세요"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              required
-              className="bg-background border-input"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-foreground">비밀번호</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="비밀번호를 입력하세요"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="bg-background border-input"
-            />
-          </div>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="userId">아이디</FieldLabel>
+              <Input
+                id="userId"
+                type="text"
+                placeholder="아이디를 입력하세요"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                required
+                className="bg-background border-input"
+              />
+            </Field>
+            
+            <Field>
+              <FieldLabel htmlFor="password">비밀번호</FieldLabel>
+              <Input
+                id="password"
+                type="password"
+                placeholder="비밀번호를 입력하세요"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="bg-background border-input"
+              />
+            </Field>
+          </FieldGroup>
 
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (
@@ -103,14 +104,6 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
             >
               회원가입
             </button>
-          </div>
-
-          <div className="mt-4 p-3 bg-secondary rounded-lg">
-            <p className="text-xs text-muted-foreground mb-2">테스트 계정:</p>
-            <div className="text-xs space-y-1">
-              <p className="text-foreground"><strong>선생님:</strong> abc1234 / abc1234!</p>
-              <p className="text-foreground"><strong>학생:</strong> 학생1 / 123456</p>
-            </div>
           </div>
         </form>
       </CardContent>

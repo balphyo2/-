@@ -5,7 +5,6 @@ import { useDataStore, useAuthStore } from '@/lib/store';
 import { REPORT_CATEGORIES, type ReportCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Dialog,
@@ -16,6 +15,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Flag } from 'lucide-react';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 
 interface ReportDialogProps {
   open: boolean;
@@ -36,7 +36,6 @@ export function ReportDialog({ open, onOpenChange, postId }: ReportDialogProps) 
 
     setIsSubmitting(true);
 
-    // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     reportPost({
@@ -56,7 +55,7 @@ export function ReportDialog({ open, onOpenChange, postId }: ReportDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <Flag className="h-5 w-5 text-destructive" />
@@ -67,23 +66,23 @@ export function ReportDialog({ open, onOpenChange, postId }: ReportDialogProps) 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-3">
-            <Label className="text-foreground">신고 사유</Label>
-            <RadioGroup value={category} onValueChange={(v) => setCategory(v as ReportCategory)}>
+        <FieldGroup className="py-4">
+          <Field>
+            <FieldLabel>신고 사유</FieldLabel>
+            <RadioGroup value={category} onValueChange={(v) => setCategory(v as ReportCategory)} className="mt-2">
               {Object.entries(REPORT_CATEGORIES).map(([key, label]) => (
                 <div key={key} className="flex items-center space-x-2">
                   <RadioGroupItem value={key} id={`post-${key}`} />
-                  <Label htmlFor={`post-${key}`} className="font-normal cursor-pointer">
+                  <label htmlFor={`post-${key}`} className="text-sm font-normal cursor-pointer">
                     {label}
-                  </Label>
+                  </label>
                 </div>
               ))}
             </RadioGroup>
-          </div>
+          </Field>
 
-          <div className="space-y-2">
-            <Label htmlFor="reason" className="text-foreground">상세 사유 (선택)</Label>
+          <Field>
+            <FieldLabel htmlFor="reason">상세 사유 (선택)</FieldLabel>
             <Textarea
               id="reason"
               placeholder="추가 설명이 있으면 작성해주세요"
@@ -92,10 +91,10 @@ export function ReportDialog({ open, onOpenChange, postId }: ReportDialogProps) 
               rows={3}
               className="resize-none"
             />
-          </div>
-        </div>
+          </Field>
+        </FieldGroup>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             취소
           </Button>

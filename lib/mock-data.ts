@@ -12,7 +12,7 @@ export const mockUsers: User[] = [
   {
     id: 'student-1',
     email: '2024001@unam.hs.kr',
-    nickname: '학생1',
+    nickname: '윤서진',
     realName: '이영희',
     role: 'student',
     createdAt: new Date('2024-03-01'),
@@ -20,7 +20,7 @@ export const mockUsers: User[] = [
   {
     id: 'student-2',
     email: '2024002@unam.hs.kr',
-    nickname: '학생2',
+    nickname: '박준영',
     realName: '박민수',
     role: 'student',
     createdAt: new Date('2024-03-02'),
@@ -28,7 +28,7 @@ export const mockUsers: User[] = [
   {
     id: 'student-3',
     email: '2024003@unam.hs.kr',
-    nickname: '학생3',
+    nickname: '최하윤',
     realName: '정지훈',
     role: 'student',
     createdAt: new Date('2024-03-03'),
@@ -67,7 +67,7 @@ export const mockPosts: Post[] = [
     title: '오늘 급식 맛있었어요!',
     content: '오늘 급식 메뉴가 제가 좋아하는 돈까스였는데 진짜 맛있었어요 ㅎㅎ\n다들 오늘 급식 어땠나요?',
     authorId: 'student-1',
-    authorName: '학생1',
+    authorName: '윤서진',
     boardType: 'free',
     isNotice: false,
     createdAt: new Date('2024-04-10'),
@@ -80,7 +80,7 @@ export const mockPosts: Post[] = [
     title: '수학 문제 질문이요',
     content: '수학 교과서 156쪽 5번 문제 풀이 방법 아시는 분 계신가요?\n\n저는 이차방정식 공식을 적용해봤는데 답이 안 나와서요...',
     authorId: 'student-2',
-    authorName: '학생2',
+    authorName: '박준영',
     boardType: 'subject',
     subject: '수학',
     isNotice: false,
@@ -94,7 +94,7 @@ export const mockPosts: Post[] = [
     title: '영어 단어 암기 팁 공유',
     content: '저만의 영어 단어 암기 방법을 공유할게요!\n\n1. 연상법 활용하기\n2. 예문과 함께 외우기\n3. 반복 학습 (에빙하우스 망각곡선 활용)\n\n도움이 되셨으면 좋겠습니다~',
     authorId: 'student-3',
-    authorName: '학생3',
+    authorName: '최하윤',
     boardType: 'subject',
     subject: '영어',
     isNotice: false,
@@ -108,7 +108,7 @@ export const mockPosts: Post[] = [
     title: '동아리 가입 문의',
     content: '밴드 동아리 가입하고 싶은데 어떻게 해야 하나요?\n드럼 칠 줄 알아요!',
     authorId: 'student-1',
-    authorName: '학생1',
+    authorName: '윤서진',
     boardType: 'free',
     isNotice: false,
     createdAt: new Date('2024-04-13'),
@@ -121,7 +121,7 @@ export const mockPosts: Post[] = [
     title: '과학 실험 보고서 양식',
     content: '과학 실험 보고서 양식 공유합니다.\n\n1. 실험 목적\n2. 실험 준비물\n3. 실험 방법\n4. 실험 결과\n5. 결론 및 고찰\n\n참고하세요!',
     authorId: 'student-2',
-    authorName: '학생2',
+    authorName: '박준영',
     boardType: 'subject',
     subject: '과학',
     isNotice: false,
@@ -151,7 +151,7 @@ export const mockComments: Comment[] = [
     postId: 'post-3',
     content: '저도요! 돈까스 진짜 맛있었어요 ㅎㅎ',
     authorId: 'student-2',
-    authorName: '학생2',
+    authorName: '박준영',
     createdAt: new Date('2024-04-10T12:30:00'),
   },
   {
@@ -159,7 +159,7 @@ export const mockComments: Comment[] = [
     postId: 'post-3',
     content: '다음에 또 나왔으면 좋겠다~',
     authorId: 'student-3',
-    authorName: '학생3',
+    authorName: '최하윤',
     createdAt: new Date('2024-04-10T12:35:00'),
   },
   {
@@ -167,7 +167,7 @@ export const mockComments: Comment[] = [
     postId: 'post-4',
     content: '그 문제는 인수분해를 먼저 해야 해요! 공식 적용하기 전에 식을 정리해보세요.',
     authorId: 'student-3',
-    authorName: '학생3',
+    authorName: '최하윤',
     createdAt: new Date('2024-04-11T14:00:00'),
   },
   {
@@ -175,7 +175,7 @@ export const mockComments: Comment[] = [
     postId: 'post-4',
     content: '감사합니다! 인수분해하니까 풀렸어요!',
     authorId: 'student-2',
-    authorName: '학생2',
+    authorName: '박준영',
     createdAt: new Date('2024-04-11T14:30:00'),
   },
   {
@@ -183,7 +183,7 @@ export const mockComments: Comment[] = [
     postId: 'post-5',
     content: '좋은 팁 감사합니다! 에빙하우스 망각곡선 처음 들어봤는데 찾아봐야겠어요.',
     authorId: 'student-1',
-    authorName: '학생1',
+    authorName: '윤서진',
     createdAt: new Date('2024-04-12T16:00:00'),
   },
   {
@@ -191,7 +191,7 @@ export const mockComments: Comment[] = [
     postId: 'post-6',
     content: '밴드 동아리 부장한테 연락해보세요! 인스타 아이디 알려드릴게요.',
     authorId: 'student-2',
-    authorName: '학생2',
+    authorName: '박준영',
     createdAt: new Date('2024-04-13T10:00:00'),
   },
   {
@@ -199,7 +199,7 @@ export const mockComments: Comment[] = [
     postId: 'post-8',
     content: '축구요! 축구가 제일 재밌어요',
     authorId: 'student-1',
-    authorName: '학생1',
+    authorName: '윤서진',
     createdAt: new Date('2024-04-15T09:00:00'),
   },
   {
@@ -207,7 +207,7 @@ export const mockComments: Comment[] = [
     postId: 'post-8',
     content: '피구 추천합니다! 다 같이 참여할 수 있어서요',
     authorId: 'student-2',
-    authorName: '학생2',
+    authorName: '박준영',
     createdAt: new Date('2024-04-15T09:15:00'),
   },
   {
@@ -215,7 +215,7 @@ export const mockComments: Comment[] = [
     postId: 'post-8',
     content: '줄다리기! 단합력 기를 수 있어요',
     authorId: 'student-3',
-    authorName: '학생3',
+    authorName: '최하윤',
     createdAt: new Date('2024-04-15T09:30:00'),
   },
   {
@@ -223,32 +223,11 @@ export const mockComments: Comment[] = [
     postId: 'post-1',
     content: '축제 기대돼요!',
     authorId: 'student-1',
-    authorName: '학생1',
+    authorName: '윤서진',
     createdAt: new Date('2024-04-01T10:00:00'),
   },
 ];
 
-export const mockPostReports: PostReport[] = [
-  {
-    id: 'report-1',
-    postId: 'post-3',
-    reporterId: 'student-2',
-    reporterName: '학생2',
-    category: 'spam',
-    reason: '같은 내용 반복 게시',
-    createdAt: new Date('2024-04-10T18:00:00'),
-  },
-];
+export const mockPostReports: PostReport[] = [];
 
-export const mockCommentReports: CommentReport[] = [
-  {
-    id: 'comment-report-1',
-    commentId: 'comment-1',
-    postId: 'post-3',
-    reporterId: 'student-3',
-    reporterName: '학생3',
-    category: 'inappropriate',
-    reason: '부적절한 표현 사용',
-    createdAt: new Date('2024-04-10T19:00:00'),
-  },
-];
+export const mockCommentReports: CommentReport[] = [];

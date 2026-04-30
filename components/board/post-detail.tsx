@@ -10,9 +10,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { ArrowLeft, Pin, Eye, MessageSquare, Send, Flag, Trash2 } from 'lucide-react';
+import { ArrowLeft, Pin, Eye, MessageSquare, Send, Flag, Trash2, MoreHorizontal } from 'lucide-react';
 import { ReportDialog } from '@/components/report/report-dialog';
 import { CommentReportDialog } from '@/components/report/comment-report-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface PostDetailProps {
   post: Post;
@@ -69,19 +75,20 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
           <ArrowLeft className="h-5 w-5" />
+          <span className="sr-only">뒤로 가기</span>
         </Button>
-        <h2 className="text-xl font-semibold text-foreground">게시글 상세</h2>
+        <h2 className="text-lg lg:text-xl font-semibold text-foreground truncate">게시글</h2>
       </div>
 
       {/* Post Content */}
       <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
+        <CardHeader className="pb-3 px-4 lg:px-6">
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-2 min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
                 {post.isNotice && (
                   <Badge variant="secondary" className="bg-primary/10 text-primary gap-1">
                     <Pin className="h-3 w-3" />
@@ -92,45 +99,41 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                   <Badge variant="outline">{post.subject}</Badge>
                 )}
               </div>
-              <h1 className="text-2xl font-bold text-foreground">{post.title}</h1>
+              <h1 className="text-xl lg:text-2xl font-bold text-foreground break-words">{post.title}</h1>
             </div>
-            <div className="flex gap-2">
-              {isTeacher && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleToggleNotice}
-                  className="gap-1"
-                >
-                  <Pin className="h-4 w-4" />
-                  {post.isNotice ? '공지 해제' : '공지 설정'}
+            
+            {/* Actions Menu - Mobile Friendly */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="shrink-0">
+                  <MoreHorizontal className="h-5 w-5" />
+                  <span className="sr-only">더보기</span>
                 </Button>
-              )}
-              {(isTeacher || isAuthor) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDeletePost}
-                  className="gap-1 text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  삭제
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setReportDialogOpen(true)}
-                className="gap-1"
-              >
-                <Flag className="h-4 w-4" />
-                신고
-              </Button>
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                {isTeacher && (
+                  <DropdownMenuItem onClick={handleToggleNotice}>
+                    <Pin className="h-4 w-4 mr-2" />
+                    {post.isNotice ? '공지 해제' : '공지 설정'}
+                  </DropdownMenuItem>
+                )}
+                {(isTeacher || isAuthor) && (
+                  <DropdownMenuItem onClick={handleDeletePost} className="text-destructive focus:text-destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    삭제
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => setReportDialogOpen(true)}>
+                  <Flag className="h-4 w-4 mr-2" />
+                  신고
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2">
+          <div className="flex items-center gap-3 lg:gap-4 text-sm text-muted-foreground pt-2 flex-wrap">
             <span className="font-medium text-foreground">{post.authorName}</span>
-            <span>{format(new Date(post.createdAt), 'yyyy년 M월 d일 HH:mm', { locale: ko })}</span>
+            <span className="hidden sm:inline">{format(new Date(post.createdAt), 'yyyy년 M월 d일 HH:mm', { locale: ko })}</span>
+            <span className="sm:hidden">{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: ko })}</span>
             <span className="flex items-center gap-1">
               <Eye className="h-4 w-4" />
               {post.viewCount}
@@ -138,8 +141,8 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
           </div>
         </CardHeader>
         <Separator />
-        <CardContent className="pt-6">
-          <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap">
+        <CardContent className="pt-6 px-4 lg:px-6">
+          <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap break-words leading-relaxed">
             {post.content}
           </div>
         </CardContent>
@@ -147,45 +150,47 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
 
       {/* Comments Section */}
       <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 px-4 lg:px-6">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-primary" />
             <h3 className="font-semibold text-foreground">댓글 {comments.length}개</h3>
           </div>
         </CardHeader>
         <Separator />
-        <CardContent className="pt-4 space-y-4">
+        <CardContent className="pt-4 space-y-4 px-4 lg:px-6">
           {/* Comment Input */}
-          <div className="flex gap-3">
+          <div className="flex gap-2 lg:gap-3">
             <div className="flex-1">
               <Textarea
                 placeholder="댓글을 입력하세요..."
                 value={commentContent}
                 onChange={(e) => setCommentContent(e.target.value)}
                 rows={2}
-                className="resize-none bg-background"
+                className="resize-none bg-background text-sm"
               />
             </div>
             <Button
               onClick={handleAddComment}
               disabled={!commentContent.trim()}
-              className="self-end"
+              size="icon"
+              className="self-end shrink-0"
             >
               <Send className="h-4 w-4" />
+              <span className="sr-only">댓글 작성</span>
             </Button>
           </div>
 
           {/* Comments List */}
           {comments.length > 0 ? (
-            <div className="space-y-3 pt-4">
+            <div className="space-y-3 pt-2">
               {comments.map((comment) => (
                 <div
                   key={comment.id}
                   className="p-3 rounded-lg bg-secondary/50"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                         <span className="font-medium text-sm text-foreground">
                           {comment.authorName}
                         </span>
@@ -196,38 +201,43 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                           })}
                         </span>
                       </div>
-                      <p className="text-sm text-foreground whitespace-pre-wrap">
+                      <p className="text-sm text-foreground whitespace-pre-wrap break-words">
                         {comment.content}
                       </p>
                     </div>
-                    <div className="flex gap-1">
-                      {(isTeacher || user?.id === comment.authorId) && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => handleDeleteComment(comment.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">더보기</span>
                         </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => handleReportComment(comment.id)}
-                      >
-                        <Flag className="h-4 w-4" />
-                      </Button>
-                    </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-32">
+                        {(isTeacher || user?.id === comment.authorId) && (
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteComment(comment.id)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            삭제
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => handleReportComment(comment.id)}>
+                          <Flag className="h-4 w-4 mr-2" />
+                          신고
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-center text-muted-foreground py-8">
-              아직 댓글이 없습니다. 첫 댓글을 남겨보세요!
-            </p>
+            <div className="py-8 text-center">
+              <p className="text-muted-foreground text-sm">
+                아직 댓글이 없습니다
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>

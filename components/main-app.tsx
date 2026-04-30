@@ -9,7 +9,7 @@ import { PostList } from '@/components/board/post-list';
 import { PostDetail } from '@/components/board/post-detail';
 import { WritePost } from '@/components/board/write-post';
 import { TeacherDashboard } from '@/components/admin/teacher-dashboard';
-import { Bell } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 type ViewState = 'list' | 'detail' | 'write';
@@ -23,6 +23,7 @@ export function MainApp() {
   const [viewState, setViewState] = useState<ViewState>('list');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showDashboard, setShowDashboard] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Reset view when board changes
   useEffect(() => {
@@ -30,6 +31,17 @@ export function MainApp() {
     setSelectedPost(null);
     setShowDashboard(false);
   }, [currentBoard, currentSubject]);
+
+  // Close sidebar on window resize to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   if (!isAuthenticated) {
     return <AuthPage />;
@@ -108,32 +120,42 @@ export function MainApp() {
         onBoardChange={handleBoardChange}
         onShowDashboard={handleShowDashboard}
         showDashboard={showDashboard}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
       {/* Main Content */}
-      <div className="ml-64">
+      <div className="lg:ml-64 min-h-screen flex flex-col">
         {/* Top Header */}
-        <header className="sticky top-0 z-10 bg-card border-b border-border px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-foreground">
-              운암고등학교 커뮤니티
-            </h1>
+        <header className="sticky top-0 z-30 bg-card border-b border-border px-4 lg:px-6 py-3 lg:py-4">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
+              {/* Mobile Menu Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden shrink-0"
+              >
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">메뉴 열기</span>
               </Button>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary rounded-full">
+              <h1 className="text-lg lg:text-xl font-semibold text-foreground truncate">
+                운암고등학교 커뮤니티
+              </h1>
+            </div>
+            <div className="flex items-center gap-2 lg:gap-3 shrink-0">
+              <div className="flex items-center gap-2 px-2 lg:px-3 py-1.5 bg-secondary rounded-full">
                 <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
                   <span className="text-xs font-medium text-primary-foreground">
                     {user?.nickname.charAt(0)}
                   </span>
                 </div>
-                <span className="text-sm font-medium text-secondary-foreground">
+                <span className="text-sm font-medium text-secondary-foreground hidden sm:inline">
                   {user?.nickname}
                 </span>
                 {user?.role === 'teacher' && (
-                  <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                  <span className="text-xs bg-primary/20 text-primary px-1.5 lg:px-2 py-0.5 rounded-full">
                     선생님
                   </span>
                 )}
@@ -143,9 +165,18 @@ export function MainApp() {
         </header>
 
         {/* Content Area */}
-        <main className="p-6 max-w-4xl mx-auto">
-          {renderContent()}
+        <main className="flex-1 p-4 lg:p-6">
+          <div className="max-w-4xl mx-auto">
+            {renderContent()}
+          </div>
         </main>
+
+        {/* Footer */}
+        <footer className="border-t border-border px-4 lg:px-6 py-4 text-center">
+          <p className="text-xs text-muted-foreground">
+            운암고등학교 커뮤니티
+          </p>
+        </footer>
       </div>
     </div>
   );

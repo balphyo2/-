@@ -4,12 +4,12 @@ import { useState } from 'react';
 import { useAuthStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { AlertCircle, CheckCircle2, Mail, UserPlus } from 'lucide-react';
+import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
 
 interface SignupFormProps {
   onSwitchToLogin: () => void;
@@ -24,7 +24,6 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  // Email verification states
   const [isVerificationSent, setIsVerificationSent] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -47,7 +46,6 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
     setIsLoading(true);
     setError('');
     
-    // Simulate sending verification email
     await new Promise((resolve) => setTimeout(resolve, 1000));
     
     setIsVerificationSent(true);
@@ -58,13 +56,11 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
   const handleVerifyOtp = async () => {
     setOtpError('');
     
-    // Simulate OTP verification (accept any 6-digit code for demo)
     if (otpValue.length !== 6) {
       setOtpError('6자리 인증 코드를 입력해주세요.');
       return;
     }
     
-    // For demo: accept "123456" or any 6-digit number
     await new Promise((resolve) => setTimeout(resolve, 500));
     
     setIsVerified(true);
@@ -92,7 +88,6 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
 
     setIsLoading(true);
     
-    // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500));
     
     signup(email, nickname, realName);
@@ -117,99 +112,101 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
               </Alert>
             )}
             
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-foreground">학교 이메일</Label>
-              <div className="flex gap-2">
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="email">학교 이메일</FieldLabel>
+                <div className="flex gap-2">
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="2024000@unam.hs.kr"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setIsVerified(false);
+                      setIsVerificationSent(false);
+                    }}
+                    required
+                    disabled={isVerified}
+                    className="flex-1 bg-background border-input"
+                  />
+                  <Button
+                    type="button"
+                    variant={isVerified ? "secondary" : "outline"}
+                    onClick={handleSendVerification}
+                    disabled={isLoading || isVerified}
+                    className="shrink-0"
+                  >
+                    {isVerified ? (
+                      <span className="flex items-center gap-1 text-green-600">
+                        <CheckCircle2 className="h-4 w-4" />
+                        인증완료
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        <Mail className="h-4 w-4" />
+                        인증
+                      </span>
+                    )}
+                  </Button>
+                </div>
+                <FieldDescription>
+                  예: 2024000... 형식의 학교 이메일을 입력하세요
+                </FieldDescription>
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="realName">실명</FieldLabel>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="2024000@unam.hs.kr"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setIsVerified(false);
-                    setIsVerificationSent(false);
-                  }}
+                  id="realName"
+                  type="text"
+                  placeholder="홍길동"
+                  value={realName}
+                  onChange={(e) => setRealName(e.target.value)}
                   required
-                  disabled={isVerified}
-                  className="flex-1 bg-background border-input"
+                  className="bg-background border-input"
                 />
-                <Button
-                  type="button"
-                  variant={isVerified ? "secondary" : "outline"}
-                  onClick={handleSendVerification}
-                  disabled={isLoading || isVerified}
-                  className="shrink-0"
-                >
-                  {isVerified ? (
-                    <span className="flex items-center gap-1 text-green-600">
-                      <CheckCircle2 className="h-4 w-4" />
-                      인증완료
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1">
-                      <Mail className="h-4 w-4" />
-                      인증하기
-                    </span>
-                  )}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                (예: 2024000... 형식의 학교 이메일을 입력하세요)
-              </p>
-            </div>
+              </Field>
 
-            <div className="space-y-2">
-              <Label htmlFor="realName" className="text-foreground">실명</Label>
-              <Input
-                id="realName"
-                type="text"
-                placeholder="홍길동"
-                value={realName}
-                onChange={(e) => setRealName(e.target.value)}
-                required
-                className="bg-background border-input"
-              />
-            </div>
+              <Field>
+                <FieldLabel htmlFor="nickname">닉네임</FieldLabel>
+                <Input
+                  id="nickname"
+                  type="text"
+                  placeholder="사용할 닉네임"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  required
+                  className="bg-background border-input"
+                />
+              </Field>
+              
+              <Field>
+                <FieldLabel htmlFor="password">비밀번호</FieldLabel>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="6자 이상 입력"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="bg-background border-input"
+                />
+              </Field>
 
-            <div className="space-y-2">
-              <Label htmlFor="nickname" className="text-foreground">닉네임</Label>
-              <Input
-                id="nickname"
-                type="text"
-                placeholder="사용할 닉네임"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                required
-                className="bg-background border-input"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground">비밀번호</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="6자 이상 입력"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="bg-background border-input"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-foreground">비밀번호 확인</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="비밀번호 다시 입력"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="bg-background border-input"
-              />
-            </div>
+              <Field>
+                <FieldLabel htmlFor="confirmPassword">비밀번호 확인</FieldLabel>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="비밀번호 다시 입력"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="bg-background border-input"
+                />
+              </Field>
+            </FieldGroup>
 
             <Button type="submit" className="w-full" disabled={isLoading || !isVerified}>
               {isLoading ? (
@@ -267,10 +264,6 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
             {otpError && (
               <p className="text-sm text-destructive">{otpError}</p>
             )}
-            
-            <p className="text-xs text-muted-foreground text-center">
-              테스트: 아무 6자리 숫자나 입력하세요 (예: 123456)
-            </p>
 
             <div className="flex gap-2 w-full">
               <Button

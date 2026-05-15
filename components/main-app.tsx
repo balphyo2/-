@@ -1,183 +1,238 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuthStore, useDataStore } from '@/lib/store';
-import type { BoardType, Post } from '@/lib/types';
-import { AuthPage } from '@/components/auth/auth-page';
-import { SidebarNav } from '@/components/layout/sidebar-nav';
-import { PostList } from '@/components/board/post-list';
-import { PostDetail } from '@/components/board/post-detail';
-import { WritePost } from '@/components/board/write-post';
-import { TeacherDashboard } from '@/components/admin/teacher-dashboard';
-import { Menu } from 'lucide-react';
+import React, { useState, ChangeEvent } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-
-type ViewState = 'list' | 'detail' | 'write';
+import { Input } from '@/components/ui/input';
+import { X, Mail, Loader2 } from 'lucide-react';
 
 export function MainApp() {
-  const { isAuthenticated, user } = useAuthStore();
-  const incrementViewCount = useDataStore((state) => state.incrementViewCount);
-  
-  const [currentBoard, setCurrentBoard] = useState<BoardType>('free');
-  const [currentSubject, setCurrentSubject] = useState<string | undefined>(undefined);
-  const [viewState, setViewState] = useState<ViewState>('list');
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [showDashboard, setShowDashboard] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Reset view when board changes
-  useEffect(() => {
-    setViewState('list');
-    setSelectedPost(null);
-    setShowDashboard(false);
-  }, [currentBoard, currentSubject]);
+  const [loginFields, setLoginFields] = useState({ id: '', pw: '' });
+  const [signupFields, setSignupFields] = useState({ 
+    email: '', 
+    name: '', 
+    id: '', 
+    pw: '' 
+  });
 
-  // Close sidebar on window resize to desktop
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setSidebarOpen(false);
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  if (!isAuthenticated) {
-    return <AuthPage />;
-  }
-
-  const handleBoardChange = (board: BoardType, subject?: string) => {
-    setCurrentBoard(board);
-    setCurrentSubject(subject);
-    setShowDashboard(false);
+  const closeAll = () => {
+    setIsLoginOpen(false);
+    setIsSignupOpen(false);
   };
 
-  const handlePostClick = (post: Post) => {
-    incrementViewCount(post.id);
-    setSelectedPost(post);
-    setViewState('detail');
-    setShowDashboard(false);
-  };
-
-  const handleWritePost = () => {
-    setViewState('write');
-    setShowDashboard(false);
-  };
-
-  const handleBack = () => {
-    setViewState('list');
-    setSelectedPost(null);
-  };
-
-  const handleWriteSuccess = () => {
-    setViewState('list');
-  };
-
-  const handleShowDashboard = () => {
-    setShowDashboard(true);
-    setViewState('list');
-    setSelectedPost(null);
-  };
-
-  const renderContent = () => {
-    if (showDashboard && user?.role === 'teacher') {
-      return <TeacherDashboard />;
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>, type: 'login' | 'signup') => {
+    const { name, value } = e.target;
+    if (type === 'login') {
+      setLoginFields(prev => ({ ...prev, [name]: value }));
+    } else {
+      setSignupFields(prev => ({ ...prev, [name]: value }));
     }
+  };
 
-    switch (viewState) {
-      case 'detail':
-        return selectedPost ? (
-          <PostDetail post={selectedPost} onBack={handleBack} />
-        ) : null;
-      case 'write':
-        return (
-          <WritePost
-            boardType={currentBoard}
-            subject={currentSubject}
-            onBack={handleBack}
-            onSuccess={handleWriteSuccess}
-          />
-        );
-      default:
-        return (
-          <PostList
-            boardType={currentBoard}
-            subject={currentSubject}
-            onPostClick={handlePostClick}
-            onWritePost={handleWritePost}
-          />
-        );
-    }
+  const onLoginSubmit = () => {
+    if (!loginFields.id) return alert("아이디를 입력하세요.");
+    setIsLoading(true);
+    setTimeout(() => {
+      alert(`로그인 성공: ${loginFields.id}님 환영합니다!`);
+      setIsLoading(false);
+      closeAll();
+    }, 1000);
+  };
+
+  const onSignupSubmit = () => {
+    alert(`가입 완료: ${signupFields.name}님, 이메일(${signupFields.email})을 확인해주세요.`);
+    closeAll();
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar */}
-      <SidebarNav
-        currentBoard={currentBoard}
-        currentSubject={currentSubject}
-        onBoardChange={handleBoardChange}
-        onShowDashboard={handleShowDashboard}
-        showDashboard={showDashboard}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      {/* 로딩 오버레이 */}
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
 
-      {/* Main Content */}
-      <div className="lg:ml-64 min-h-screen flex flex-col">
-        {/* Top Header */}
-        <header className="sticky top-0 z-30 bg-card border-b border-border px-4 lg:px-6 py-3 lg:py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              {/* Mobile Menu Button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden shrink-0"
-              >
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">메뉴 열기</span>
+      {/* 네비게이션 바 */}
+      <header className="sticky top-0 z-40 w-full border-b border-border bg-card">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <div 
+            className="flex items-center gap-2 cursor-pointer" 
+            onClick={() => window.location.href='/'}
+          >
+            <Image 
+              src="/assets/image/logo.png" 
+              alt="UTime Logo" 
+              width={50} 
+              height={60}
+              className="object-contain"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              onClick={() => setIsLoginOpen(true)}
+            >
+              로그인
+            </Button>
+            <Button 
+              onClick={() => setIsSignupOpen(true)}
+            >
+              회원가입
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* 메인 컨텐츠 */}
+      <main className="flex flex-col items-center justify-center px-4 py-24 text-center">
+        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+          UTime 커뮤니티
+        </h1>
+        <p className="mt-4 text-lg text-muted-foreground">
+          함께 시간을 공유하는 공간입니다.
+        </p>
+      </main>
+
+      {/* 로그인 모달 */}
+      {isLoginOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+          onClick={(e) => e.target === e.currentTarget && closeAll()}
+        >
+          <div className="relative w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-lg">
+            <button 
+              onClick={closeAll}
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <X className="h-5 w-5" />
+              <span className="sr-only">닫기</span>
+            </button>
+            
+            <div className="flex flex-col space-y-1.5 text-center mb-6">
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground">로그인</h2>
+              <p className="text-sm text-muted-foreground">
+                커뮤니티로 돌아오신 것을 환영합니다.
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              <Input 
+                type="text" 
+                name="id" 
+                placeholder="아이디" 
+                value={loginFields.id} 
+                onChange={(e) => handleInputChange(e, 'login')} 
+              />
+              <Input 
+                type="password" 
+                name="pw" 
+                placeholder="비밀번호" 
+                value={loginFields.pw} 
+                onChange={(e) => handleInputChange(e, 'login')} 
+              />
+              <Button className="w-full" onClick={onLoginSubmit}>
+                UTime 로그인
               </Button>
-              <h1 className="text-lg lg:text-xl font-semibold text-foreground truncate">
-                운암고등학교 커뮤니티
-              </h1>
             </div>
-            <div className="flex items-center gap-2 lg:gap-3 shrink-0">
-              <div className="flex items-center gap-2 px-2 lg:px-3 py-1.5 bg-secondary rounded-full">
-                <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                  <span className="text-xs font-medium text-primary-foreground">
-                    {user?.nickname.charAt(0)}
-                  </span>
-                </div>
-                <span className="text-sm font-medium text-secondary-foreground hidden sm:inline">
-                  {user?.nickname}
-                </span>
-                {user?.role === 'teacher' && (
-                  <span className="text-xs bg-primary/20 text-primary px-1.5 lg:px-2 py-0.5 rounded-full">
-                    선생님
-                  </span>
-                )}
+            
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              UTime이 처음이신가요?{' '}
+              <button 
+                className="font-medium text-primary hover:underline"
+                onClick={() => {setIsLoginOpen(false); setIsSignupOpen(true);}}
+              >
+                회원가입
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 회원가입 모달 */}
+      {isSignupOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+          onClick={(e) => e.target === e.currentTarget && closeAll()}
+        >
+          <div className="relative w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-lg">
+            <button 
+              onClick={closeAll}
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <X className="h-5 w-5" />
+              <span className="sr-only">닫기</span>
+            </button>
+            
+            <div className="flex flex-col space-y-1.5 text-center mb-6">
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground">회원가입</h2>
+              <p className="text-sm text-muted-foreground">
+                가입하여 나만의 관심사를 공유해보세요.
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              <div className="flex gap-2">
+                <Input 
+                  type="email" 
+                  name="email" 
+                  placeholder="학교 이메일 주소" 
+                  value={signupFields.email} 
+                  onChange={(e) => handleInputChange(e, 'signup')}
+                  className="flex-1"
+                />
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => alert("인증코드가 발송되었습니다.")}
+                  className="shrink-0"
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  인증하기
+                </Button>
               </div>
+              <Input 
+                type="text" 
+                name="name" 
+                placeholder="이름" 
+                value={signupFields.name}
+                onChange={(e) => handleInputChange(e, 'signup')} 
+              />
+              <Input 
+                type="text" 
+                name="id" 
+                placeholder="아이디" 
+                value={signupFields.id}
+                onChange={(e) => handleInputChange(e, 'signup')} 
+              />
+              <Input 
+                type="password" 
+                name="pw" 
+                placeholder="비밀번호" 
+                value={signupFields.pw}
+                onChange={(e) => handleInputChange(e, 'signup')} 
+              />
+              <Button className="w-full" onClick={onSignupSubmit}>
+                UTime 가입하기
+              </Button>
             </div>
+            
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              이미 회원이신가요?{' '}
+              <button 
+                className="font-medium text-primary hover:underline"
+                onClick={() => {setIsSignupOpen(false); setIsLoginOpen(true);}}
+              >
+                로그인
+              </button>
+            </p>
           </div>
-        </header>
-
-        {/* Content Area */}
-        <main className="flex-1 p-4 lg:p-6">
-          <div className="max-w-4xl mx-auto">
-            {renderContent()}
-          </div>
-        </main>
-
-        {/* Footer */}
-        <footer className="border-t border-border px-4 lg:px-6 py-4 text-center">
-          <p className="text-xs text-muted-foreground">
-            운암고등학교 커뮤니티
-          </p>
-        </footer>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X, Mail, Loader2 } from 'lucide-react';
+import '@/styles/main.css';
 
 export function MainApp() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -49,19 +50,19 @@ export function MainApp() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="page-container">
       {/* 로딩 오버레이 */}
       {isLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="loading-overlay">
+          <Loader2 className="loading-spinner" />
         </div>
       )}
 
       {/* 네비게이션 바 */}
-      <header className="sticky top-0 z-40 w-full border-b border-border bg-card">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+      <header className="nav-header">
+        <div className="nav-container">
           <div 
-            className="flex items-center gap-2 cursor-pointer" 
+            className="nav-logo" 
             onClick={() => window.location.href='/'}
           >
             <Image 
@@ -69,10 +70,9 @@ export function MainApp() {
               alt="UTime Logo" 
               width={50} 
               height={60}
-              className="object-contain"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="nav-buttons">
             <Button 
               variant="ghost" 
               onClick={() => setIsLoginOpen(true)}
@@ -89,11 +89,11 @@ export function MainApp() {
       </header>
 
       {/* 메인 컨텐츠 */}
-      <main className="flex flex-col items-center justify-center px-4 py-24 text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+      <main className="main-content">
+        <h1 className="main-title">
           UTime 커뮤니티
         </h1>
-        <p className="mt-4 text-lg text-muted-foreground">
+        <p className="main-subtitle">
           함께 시간을 공유하는 공간입니다.
         </p>
       </main>
@@ -101,26 +101,26 @@ export function MainApp() {
       {/* 로그인 모달 */}
       {isLoginOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+          className="modal-overlay"
           onClick={(e) => e.target === e.currentTarget && closeAll()}
         >
-          <div className="relative w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-lg">
+          <div className="modal-container">
             <button 
               onClick={closeAll}
-              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="modal-close"
             >
-              <X className="h-5 w-5" />
+              <X className="modal-close-icon" />
               <span className="sr-only">닫기</span>
             </button>
             
-            <div className="flex flex-col space-y-1.5 text-center mb-6">
-              <h2 className="text-2xl font-semibold tracking-tight text-foreground">로그인</h2>
-              <p className="text-sm text-muted-foreground">
+            <div className="modal-header">
+              <h2 className="modal-title">로그인</h2>
+              <p className="modal-description">
                 커뮤니티로 돌아오신 것을 환영합니다.
               </p>
             </div>
             
-            <div className="flex flex-col gap-4">
+            <div className="modal-form">
               <Input 
                 type="text" 
                 name="id" 
@@ -140,10 +140,10 @@ export function MainApp() {
               </Button>
             </div>
             
-            <p className="mt-4 text-center text-sm text-muted-foreground">
+            <p className="modal-footer">
               UTime이 처음이신가요?{' '}
               <button 
-                className="font-medium text-primary hover:underline"
+                className="modal-footer-link"
                 onClick={() => {setIsLoginOpen(false); setIsSignupOpen(true);}}
               >
                 회원가입
@@ -156,40 +156,40 @@ export function MainApp() {
       {/* 회원가입 모달 */}
       {isSignupOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+          className="modal-overlay"
           onClick={(e) => e.target === e.currentTarget && closeAll()}
         >
-          <div className="relative w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-lg">
+          <div className="modal-container">
             <button 
               onClick={closeAll}
-              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="modal-close"
             >
-              <X className="h-5 w-5" />
+              <X className="modal-close-icon" />
               <span className="sr-only">닫기</span>
             </button>
             
-            <div className="flex flex-col space-y-1.5 text-center mb-6">
-              <h2 className="text-2xl font-semibold tracking-tight text-foreground">회원가입</h2>
-              <p className="text-sm text-muted-foreground">
+            <div className="modal-header">
+              <h2 className="modal-title">회원가입</h2>
+              <p className="modal-description">
                 가입하여 나만의 관심사를 공유해보세요.
               </p>
             </div>
             
-            <div className="flex flex-col gap-4">
-              <div className="flex gap-2">
+            <div className="modal-form">
+              <div className="modal-email-row">
                 <Input 
                   type="email" 
                   name="email" 
                   placeholder="학교 이메일 주소" 
                   value={signupFields.email} 
                   onChange={(e) => handleInputChange(e, 'signup')}
-                  className="flex-1"
+                  className="modal-email-input"
                 />
                 <Button 
                   type="button" 
                   variant="outline"
                   onClick={() => alert("인증코드가 발송되었습니다.")}
-                  className="shrink-0"
+                  className="modal-verify-btn"
                 >
                   <Mail className="mr-2 h-4 w-4" />
                   인증하기
@@ -221,10 +221,10 @@ export function MainApp() {
               </Button>
             </div>
             
-            <p className="mt-4 text-center text-sm text-muted-foreground">
+            <p className="modal-footer">
               이미 회원이신가요?{' '}
               <button 
-                className="font-medium text-primary hover:underline"
+                className="modal-footer-link"
                 onClick={() => {setIsSignupOpen(false); setIsLoginOpen(true);}}
               >
                 로그인

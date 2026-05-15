@@ -47,7 +47,7 @@ jobs:
             exit 0
           fi
       - name: Setup pnpm
-        if: steps:detect-package-manager.outputs.manager == 'pnpm'
+        if: steps.detect-package-manager.outputs.manager == 'pnpm'
         uses: pnpm/action-setup@v3
         with:
           version: 8

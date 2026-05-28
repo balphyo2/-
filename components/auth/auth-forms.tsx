@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Eye, EyeOff, Mail, Lock, User, Hash, AtSign, Shield, ArrowLeft, CheckCircle, AlertCircle } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, Hash, AtSign, Shield, ArrowLeft, CheckCircle, AlertCircle, Send, Timer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -39,6 +39,14 @@ export function AuthForms() {
   const [resetStep, setResetStep] = useState<"email" | "password" | "success">("email")
   const [resetError, setResetError] = useState("")
 
+  // Email verification state for signup
+  const [verificationCodeSent, setVerificationCodeSent] = useState(false)
+  const [verificationCode, setVerificationCode] = useState("")
+  const [isEmailVerified, setIsEmailVerified] = useState(false)
+  const [verificationError, setVerificationError] = useState("")
+  const [verificationTimer, setVerificationTimer] = useState(0)
+  const [showVerificationToast, setShowVerificationToast] = useState(false)
+
   // Mock registered emails for verification
   const REGISTERED_EMAILS = [
     "2024001@school.hs.kr",
@@ -54,7 +62,73 @@ export function AuthForms() {
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!isEmailVerified) return
     router.push("/board")
+  }
+
+  // Email validation helper
+  const isValidEmailFormat = useCallback((email: string) => {
+    return /^[0-9]{7}@school\.hs\.kr$/.test(email)
+  }, [])
+
+  // Timer effect for countdown
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (verificationTimer > 0) {
+      interval = setInterval(() => {
+        setVerificationTimer((prev) => prev - 1)
+      }, 1000)
+    } else if (verificationTimer === 0 && verificationCodeSent && !isEmailVerified) {
+      // Timer expired
+      setVerificationError("인증코드가 올바르지 않거나 시간이 만료되었습니다.")
+    }
+    return () => clearInterval(interval)
+  }, [verificationTimer, verificationCodeSent, isEmailVerified])
+
+  // Format timer as MM:SS
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+  }
+
+  // Send verification code
+  const handleSendVerificationCode = () => {
+    if (!isValidEmailFormat(schoolEmail)) return
+    
+    setVerificationCodeSent(true)
+    setVerificationTimer(180) // 3 minutes
+    setVerificationCode("")
+    setVerificationError("")
+    setIsEmailVerified(false)
+    
+    // Show toast
+    setShowVerificationToast(true)
+    setTimeout(() => setShowVerificationToast(false), 3000)
+  }
+
+  // Verify code
+  const handleVerifyCode = () => {
+    // Mock: accept "123456" or any 6-digit code for demo
+    if (verificationCode === "123456") {
+      setIsEmailVerified(true)
+      setVerificationError("")
+      setVerificationTimer(0)
+    } else {
+      setVerificationError("인증코드가 올바르지 않거나 시간이 만료되었습니다.")
+    }
+  }
+
+  // Reset verification when email changes
+  const handleEmailChange = (email: string) => {
+    setSchoolEmail(email)
+    if (verificationCodeSent) {
+      setVerificationCodeSent(false)
+      setVerificationCode("")
+      setIsEmailVerified(false)
+      setVerificationError("")
+      setVerificationTimer(0)
+    }
   }
 
   const handleVerifyResetEmail = (e: React.FormEvent) => {
@@ -105,6 +179,16 @@ export function AuthForms() {
   }
 
   return (
+    <>
+    {/* Verification Code Sent Toast */}
+    {showVerificationToast && (
+      <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+        <div className="bg-primary text-primary-foreground px-4 py-3 rounded-lg shadow-lg flex items-center gap-3">
+          <Send className="w-5 h-5" />
+          <span className="text-sm font-medium">입력하신 이메일로 인증코드가 발송되었습니다.</span>
+        </div>
+      </div>
+    )}
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left Panel - Branding */}
       <div className="lg:w-1/2 bg-primary relative overflow-hidden flex flex-col justify-center items-center p-8 lg:p-16">
@@ -167,7 +251,7 @@ export function AuthForms() {
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-foreground">비밀번호 재설정</h2>
                 <p className="text-muted-foreground mt-1">
-                  {resetStep === "email" && "등록된 학교 이메일로 인증해주세요"}
+                  {resetStep === "email" && "등록된 학교 이메일�� 인증해주세요"}
                   {resetStep === "password" && "새로운 비밀번호를 설정해주세요"}
                   {resetStep === "success" && "비밀번호가 변경되었습니다"}
                 </p>
@@ -488,21 +572,92 @@ export function AuthForms() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <Label htmlFor="school-email" className="text-sm font-medium">
                       학교 이메일
                     </Label>
-                    <div className="relative">
-                      <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="school-email"
-                        type="email"
-                        placeholder="2024000...@school.hs.kr"
-                        value={schoolEmail}
-                        onChange={(e) => setSchoolEmail(e.target.value)}
-                        className="pl-10 h-11 bg-card border-input"
-                      />
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="school-email"
+                          type="email"
+                          placeholder="2024000...@school.hs.kr"
+                          value={schoolEmail}
+                          onChange={(e) => handleEmailChange(e.target.value)}
+                          disabled={isEmailVerified}
+                          className="pl-10 h-11 bg-card border-input"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant={verificationCodeSent && !isEmailVerified ? "outline" : "default"}
+                        onClick={handleSendVerificationCode}
+                        disabled={!isValidEmailFormat(schoolEmail) || isEmailVerified}
+                        className="h-11 px-4 shrink-0"
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        {verificationCodeSent ? "재전송" : "인증코드 전송"}
+                      </Button>
                     </div>
+                    
+                    {/* Timer display */}
+                    {verificationCodeSent && verificationTimer > 0 && !isEmailVerified && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Timer className="w-4 h-4 text-primary" />
+                        <span className="text-primary font-medium">
+                          남은 시간: {formatTimer(verificationTimer)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Verification code input - smoothly revealed */}
+                    {verificationCodeSent && !isEmailVerified && (
+                      <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                        <Label htmlFor="verification-code" className="text-sm font-medium">
+                          인증코드 입력 (6자리)
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="verification-code"
+                            type="text"
+                            placeholder="인증코드 6자리"
+                            maxLength={6}
+                            value={verificationCode}
+                            onChange={(e) => {
+                              setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                              setVerificationError("")
+                            }}
+                            className="h-11 bg-card border-input font-mono tracking-widest text-center"
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleVerifyCode}
+                            disabled={verificationCode.length !== 6 || verificationTimer === 0}
+                            className="h-11 px-6"
+                          >
+                            확인
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Verification success message */}
+                    {isEmailVerified && (
+                      <div className="flex items-center gap-2 p-3 bg-accent/10 border border-accent/30 rounded-lg animate-in fade-in duration-300">
+                        <CheckCircle className="w-5 h-5 text-accent shrink-0" />
+                        <span className="text-sm font-medium text-accent">이메일 인증이 완료되었습니다.</span>
+                      </div>
+                    )}
+
+                    {/* Verification error message */}
+                    {verificationError && !isEmailVerified && (
+                      <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg animate-in fade-in duration-300">
+                        <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
+                        <span className="text-sm text-destructive">{verificationError}</span>
+                      </div>
+                    )}
+
                     <p className="text-xs text-muted-foreground">
                       인증을 위해 공식 학교 이메일을 사용해주세요
                     </p>
@@ -577,8 +732,12 @@ export function AuthForms() {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full h-11 text-base font-medium">
-                    계정 만들기
+                  <Button 
+                    type="submit" 
+                    className="w-full h-11 text-base font-medium"
+                    disabled={!isEmailVerified}
+                  >
+                    {isEmailVerified ? "회원가입 완료" : "이메일 인증을 완료해주세요"}
                   </Button>
                 </form>
 
@@ -598,5 +757,6 @@ export function AuthForms() {
         </div>
       </div>
     </div>
+    </>
   )
 }

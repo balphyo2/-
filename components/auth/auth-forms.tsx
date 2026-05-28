@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Eye, EyeOff, Mail, Lock, User, Hash, AtSign, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +12,7 @@ import { cn } from "@/lib/utils"
 type FormType = "login" | "signup"
 
 export function AuthForms() {
+  const router = useRouter()
   const [activeForm, setActiveForm] = useState<FormType>("login")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -30,12 +32,14 @@ export function AuthForms() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("[v0] Login attempt:", { loginEmail, rememberMe })
+    // Navigate to board on successful login
+    router.push("/board")
   }
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("[v0] Signup attempt:", { studentId, realName, schoolEmail, nickname })
+    // Navigate to board on successful signup
+    router.push("/board")
   }
 
   return (

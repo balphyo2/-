@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   Search,
   Menu,
@@ -34,6 +35,11 @@ import {
   Image,
   Quote,
   Code,
+  User,
+  Hash,
+  Camera,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,6 +47,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
@@ -323,11 +330,17 @@ interface User {
   id: string
   nickname: string
   isAdmin: boolean
+  realName: string
+  studentId: string
+  email: string
+  profileImage?: string
+  lastNicknameChange?: string // Date string for 7-day rule
 }
 
 type ViewMode = "list" | "detail" | "write"
 
 export function CommunityBoard() {
+  const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState("free")
   const [searchQuery, setSearchQuery] = useState("")
@@ -350,10 +363,27 @@ export function CommunityBoard() {
   // Comment state
   const [newComment, setNewComment] = useState("")
   
+  // Profile modal state
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [newNickname, setNewNickname] = useState("")
+  const [nicknameError, setNicknameError] = useState("")
+  const [nicknameSuccess, setNicknameSuccess] = useState("")
+  
+  // Logout alert state
+  const [showLogoutAlert, setShowLogoutAlert] = useState(false)
+  
   // Mock logged in user (change this to test admin functionality)
-  const [currentUser] = useState<User>(() => {
+  const [currentUser, setCurrentUser] = useState<User>(() => {
     const admin = ADMIN_ACCOUNTS[0]
-    return { id: admin.id, nickname: admin.nickname, isAdmin: true }
+    return { 
+      id: admin.id, 
+      nickname: admin.nickname, 
+      isAdmin: true,
+      realName: "김관리",
+      studentId: "ADMIN",
+      email: "admin@school.hs.kr",
+      lastNicknameChange: "2026-05-15" // 13 days ago, can change
+    }
   })
 
   const getCategoryName = (categoryId: string) => {
@@ -439,6 +469,67 @@ export function CommunityBoard() {
       setNewComment("")
     }
   }
+  
+  // Calculate if nickname can be changed (7-day rule)
+  const canChangeNickname = () => {
+    if (!currentUser.lastNicknameChange) return true
+    const lastChange = new Date(currentUser.lastNicknameChange)
+    const now = new Date()
+    const diffDays = Math.floor((now.getTime() - lastChange.getTime()) / (1000 * 60 * 60 * 24))
+    return diffDays >= 7
+  }
+  
+  const getDaysUntilNicknameChange = () => {
+    if (!currentUser.lastNicknameChange) return 0
+    const lastChange = new Date(currentUser.lastNicknameChange)
+    const now = new Date()
+    const diffDays = Math.floor((now.getTime() - lastChange.getTime()) / (1000 * 60 * 60 * 24))
+    return Math.max(0, 7 - diffDays)
+  }
+  
+  const handleOpenProfile = () => {
+    setNewNickname(currentUser.nickname)
+    setNicknameError("")
+    setNicknameSuccess("")
+    setProfileModalOpen(true)
+  }
+  
+  const handleSaveNickname = () => {
+    setNicknameError("")
+    setNicknameSuccess("")
+    
+    if (!newNickname.trim()) {
+      setNicknameError("닉네임을 입력해주세요.")
+      return
+    }
+    
+    if (newNickname.length < 2 || newNickname.length > 20) {
+      setNicknameError("닉네임은 2자 이상 20자 이하로 입력해주세요.")
+      return
+    }
+    
+    if (!canChangeNickname()) {
+      const daysLeft = getDaysUntilNicknameChange()
+      setNicknameError(`닉네임 변경은 ${daysLeft}일 후에 가능합니다.`)
+      return
+    }
+    
+    // Update nickname
+    const today = new Date().toISOString().split("T")[0]
+    setCurrentUser(prev => ({
+      ...prev,
+      nickname: newNickname,
+      lastNicknameChange: today
+    }))
+    setNicknameSuccess("닉네임이 성공적으로 변경되었습니다. (다음 변경 가능일: 7일 후)")
+  }
+  
+  const handleLogout = () => {
+    setShowLogoutAlert(true)
+    setTimeout(() => {
+      router.push("/")
+    }, 1500)
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -514,8 +605,8 @@ export function CommunityBoard() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem className="gap-2">
-                  <Users className="w-4 h-4" />
+                <DropdownMenuItem className="gap-2" onClick={handleOpenProfile}>
+                  <User className="w-4 h-4" />
                   내 프로필
                 </DropdownMenuItem>
                 {currentUser.isAdmin && (
@@ -531,7 +622,7 @@ export function CommunityBoard() {
                   </>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="gap-2 text-destructive">
+                <DropdownMenuItem className="gap-2 text-destructive" onClick={handleLogout}>
                   <LogOut className="w-4 h-4" />
                   로그아웃
                 </DropdownMenuItem>
@@ -1152,6 +1243,135 @@ export function CommunityBoard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Profile Modal */}
+      <Dialog open={profileModalOpen} onOpenChange={setProfileModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" />
+              내 프로필
+            </DialogTitle>
+            <DialogDescription>
+              프로필 정보를 확인하고 닉네임을 변경할 수 있습니다.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-6">
+            {/* Profile Picture */}
+            <div className="flex justify-center">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20">
+                  {currentUser.profileImage ? (
+                    <img 
+                      src={currentUser.profileImage} 
+                      alt="Profile" 
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-3xl font-bold text-primary">
+                      {currentUser.nickname.charAt(0)}
+                    </span>
+                  )}
+                </div>
+                <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground shadow-md hover:bg-primary/90 transition-colors">
+                  <Camera className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* User Info */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">실명</Label>
+                  <div className="flex items-center gap-2 p-2.5 bg-secondary rounded-lg">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">{currentUser.realName}</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">학번 / ID</Label>
+                  <div className="flex items-center gap-2 p-2.5 bg-secondary rounded-lg">
+                    <Hash className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">{currentUser.studentId}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Nickname Input */}
+              <div className="space-y-2">
+                <Label htmlFor="nickname" className="text-sm font-medium">
+                  닉네임 (커뮤니티 표시명)
+                </Label>
+                <Input
+                  id="nickname"
+                  value={newNickname}
+                  onChange={(e) => {
+                    setNewNickname(e.target.value)
+                    setNicknameError("")
+                    setNicknameSuccess("")
+                  }}
+                  placeholder="닉네임을 입력하세요"
+                  className="h-11"
+                />
+                <p className="text-xs text-amber-600 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  닉네임은 변경 후 7일 동안 다시 바꿀 수 없습니다.
+                </p>
+                
+                {!canChangeNickname() && (
+                  <p className="text-xs text-muted-foreground">
+                    다음 변경 가능일: {getDaysUntilNicknameChange()}일 후
+                  </p>
+                )}
+              </div>
+
+              {/* Error/Success Messages */}
+              {nicknameError && (
+                <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
+                  <p className="text-sm text-destructive">{nicknameError}</p>
+                </div>
+              )}
+              
+              {nicknameSuccess && (
+                <div className="flex items-center gap-2 p-3 bg-accent/10 border border-accent/20 rounded-lg">
+                  <CheckCircle className="w-4 h-4 text-accent shrink-0" />
+                  <p className="text-sm text-accent">{nicknameSuccess}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setProfileModalOpen(false)}>
+              닫기
+            </Button>
+            <Button 
+              onClick={handleSaveNickname}
+              disabled={newNickname === currentUser.nickname || !newNickname.trim()}
+            >
+              저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Logout Alert */}
+      {showLogoutAlert && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
+          <div className="bg-card rounded-xl border border-border p-6 shadow-xl animate-in fade-in zoom-in duration-200 max-w-sm mx-4">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">로그아웃 되었습니다</h3>
+              <p className="text-sm text-muted-foreground">로그인 페이지로 이동합니다...</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

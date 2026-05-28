@@ -22,9 +22,22 @@ import {
   Plus,
   LogOut,
   Home,
+  ArrowLeft,
+  Send,
+  Tag,
+  FileText,
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  Link,
+  Image,
+  Quote,
+  Code,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -43,6 +56,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
 // Hardcoded Admin Accounts
@@ -64,16 +84,224 @@ const CATEGORIES = [
   { id: "career", name: "진로/상담", icon: Compass },
 ]
 
-// Mock Posts Data
+// Mock Posts Data with content
 const MOCK_POSTS = [
-  { id: 1, title: "내일 체육대회 준비물 뭐예요?", category: "free", author: "익명의 학생1", date: "2026-05-28", hasReports: false },
-  { id: 2, title: "중간고사 범위 정리해봤습니다", category: "korean", author: "공부벌레", date: "2026-05-27", hasReports: true },
-  { id: 3, title: "수학 문제 질문드립니다", category: "math", author: "수포자탈출", date: "2026-05-27", hasReports: false },
-  { id: 4, title: "영어 에세이 첨삭 부탁드려요", category: "english", author: "영어마스터", date: "2026-05-26", hasReports: false },
-  { id: 5, title: "진로상담 신청 방법 알려주세요", category: "career", author: "고민이많아", date: "2026-05-26", hasReports: true },
-  { id: 6, title: "과학 실험 보고서 양식 공유", category: "science", author: "과학덕후", date: "2026-05-25", hasReports: false },
-  { id: 7, title: "학사일정 변경 안내", category: "notice", author: "운암고 게시판 관리인", date: "2026-05-25", hasReports: false },
-  { id: 8, title: "동아리 모집 공고", category: "free", author: "동아리장", date: "2026-05-24", hasReports: false },
+  { 
+    id: 1, 
+    title: "내일 체육대회 준비물 뭐예요?", 
+    category: "free", 
+    author: "익명의 학생1", 
+    date: "2026-05-28",
+    time: "14:32",
+    content: `안녕하세요! 내일 체육대회인데 준비물이 뭔지 정확히 모르겠어서요.
+
+선생님께서 말씀하신 것 같은데 제가 놓쳤나봐요 ㅠㅠ
+
+혹시 아시는 분 계시면 알려주세요!
+
+- 운동화는 필수인가요?
+- 반티 입어야 하나요?
+- 물이나 간식 가져가도 되나요?`,
+    tags: ["체육대회", "준비물", "질문"],
+    hasReports: false,
+    comments: [
+      { id: 1, author: "체육부장", content: "운동화 필수고요, 반티 꼭 입고 오세요! 물은 가져오시면 됩니다.", date: "2026-05-28", time: "14:45" },
+      { id: 2, author: "같은반친구", content: "간식도 가져와도 된대요~ 도시락도 싸오라고 하셨어요!", date: "2026-05-28", time: "15:02" },
+    ]
+  },
+  { 
+    id: 2, 
+    title: "중간고사 범위 정리해봤습니다", 
+    category: "korean", 
+    author: "공부벌레", 
+    date: "2026-05-27",
+    time: "20:15",
+    content: `국어 중간고사 범위 정리해봤습니다!
+
+## 문학 파트
+- 현대시: 윤동주 '서시', 김소월 '진달래꽃'
+- 고전시: 정철 '관동별곡'
+- 현대소설: 김유정 '동백꽃'
+
+## 문법 파트
+- 음운의 변동
+- 단어의 형성
+- 문장 성분
+
+## 비문학
+- 논증 방식
+- 글의 구조 파악
+
+도움이 되셨으면 좋겠습니다! 화이팅!`,
+    tags: ["국어", "중간고사", "범위정리"],
+    hasReports: true,
+    comments: [
+      { id: 1, author: "열공중", content: "와 감사합니다!! 정리 진짜 잘하셨네요", date: "2026-05-27", time: "21:30" },
+    ]
+  },
+  { 
+    id: 3, 
+    title: "수학 문제 질문드립니다", 
+    category: "math", 
+    author: "수포자탈출", 
+    date: "2026-05-27",
+    time: "18:20",
+    content: `수학 23번 문제 어떻게 푸는지 모르겠어요 ㅠㅠ
+
+이차함수 문제인데 최댓값 구하는 거요.
+
+f(x) = -x² + 4x + 5 에서 최댓값을 구하라는 문제인데...
+
+완전제곱식으로 바꾸는 건 알겠는데 그 다음이 헷갈려요.
+
+도움 주시면 감사하겠습니다!`,
+    tags: ["수학", "이차함수", "질문"],
+    hasReports: false,
+    comments: [
+      { id: 1, author: "수학천재", content: "f(x) = -(x-2)² + 9 로 바꾸면 x=2일 때 최댓값 9입니다!", date: "2026-05-27", time: "19:00" },
+      { id: 2, author: "수포자탈출", content: "아!! 이해됐어요 감사합니다!!!", date: "2026-05-27", time: "19:15" },
+    ]
+  },
+  { 
+    id: 4, 
+    title: "영어 에세이 첨삭 부탁드려요", 
+    category: "english", 
+    author: "영어마스터", 
+    date: "2026-05-26",
+    time: "16:40",
+    content: `영어 수행평가로 에세이를 써야 하는데 첨삭 부탁드려도 될까요?
+
+주제: The importance of environmental protection
+
+Environmental protection is very important in our lives. We need to protect the environment for our future.
+
+First, we should reduce plastic use. Plastic is harmful to animals and nature.
+
+Second, we can plant more trees. Trees give us clean air.
+
+In conclusion, we must protect our environment together.
+
+---
+
+너무 짧은 것 같은데 어떻게 더 늘릴 수 있을까요?`,
+    tags: ["영어", "에세이", "첨삭"],
+    hasReports: false,
+    comments: []
+  },
+  { 
+    id: 5, 
+    title: "진로상담 신청 방법 알려주세요", 
+    category: "career", 
+    author: "고민이많아", 
+    date: "2026-05-26",
+    time: "10:30",
+    content: `진로 상담 받고 싶은데 어떻게 신청하는지 모르겠어요.
+
+선생님한테 직접 가서 말씀드려야 하나요?
+아니면 온라인으로 신청하는 방법이 있나요?
+
+요즘 진로 때문에 고민이 많아서 상담 한번 받아보고 싶습니다.
+
+아시는 분 계시면 알려주세요!`,
+    tags: ["진로", "상담", "신청방법"],
+    hasReports: true,
+    comments: [
+      { id: 1, author: "3학년선배", content: "진로상담실 앞에 신청서 있어요! 작성해서 제출하시면 됩니다", date: "2026-05-26", time: "11:00" },
+    ]
+  },
+  { 
+    id: 6, 
+    title: "과학 실험 보고서 양식 공유", 
+    category: "science", 
+    author: "과학덕후", 
+    date: "2026-05-25",
+    time: "22:10",
+    content: `과학 실험 보고서 양식 공유합니다!
+
+## 보고서 구성
+
+1. **실험 제목**
+2. **실험 목적**
+3. **실험 준비물**
+4. **실험 방법** (순서대로 작성)
+5. **실험 결과** (표, 그래프 포함)
+6. **결론 및 고찰**
+7. **참고 문헌**
+
+선생님께서 강조하신 부분:
+- 결과는 객관적으로 작성
+- 고찰에서 오차 원인 분석 필수
+- 참고 문헌 형식 지켜서 작성
+
+도움이 되셨으면 좋겠습니다!`,
+    tags: ["과학", "실험보고서", "양식"],
+    hasReports: false,
+    comments: [
+      { id: 1, author: "과학초보", content: "딱 필요했던 건데 감사합니다!", date: "2026-05-26", time: "08:30" },
+    ]
+  },
+  { 
+    id: 7, 
+    title: "학사일정 변경 안내", 
+    category: "notice", 
+    author: "운암고 게시판 관리인", 
+    date: "2026-05-25",
+    time: "09:00",
+    content: `## 학사일정 변경 안내
+
+안녕하세요, 운암고등학교입니다.
+
+아래와 같이 학사일정이 변경되었음을 안내드립니다.
+
+### 변경 사항
+
+| 기존 일정 | 변경 일정 | 내용 |
+|----------|----------|------|
+| 5/30(금) | 5/31(토) | 체육대회 |
+| 6/5(목) | 6/7(토) | 학부모 상담 주간 시작 |
+
+### 사유
+- 체육대회: 우천 예보로 인한 연기
+- 학부모 상담: 학교 행사 일정 조율
+
+문의사항은 교무실로 연락 바랍니다.`,
+    tags: ["공지", "학사일정", "변경"],
+    hasReports: false,
+    comments: []
+  },
+  { 
+    id: 8, 
+    title: "동아리 모집 공고", 
+    category: "free", 
+    author: "동아리장", 
+    date: "2026-05-24",
+    time: "13:25",
+    content: `## 코딩 동아리 'CodeX' 신입 부원 모집!
+
+안녕하세요! 코딩 동아리 CodeX입니다.
+
+### 모집 대상
+- 프로그래밍에 관심 있는 1, 2학년
+- 경험 무관 (초보자 환영!)
+
+### 활동 내용
+- 주 1회 정기 모임 (수요일 방과후)
+- 웹 개발, 앱 개발 프로젝트
+- 각종 코딩 대회 참가
+- 선배 멘토링
+
+### 지원 방법
+- 구글폼 링크로 지원서 제출
+- 마감: 5/30(금)
+
+많은 관심 부탁드립니다!`,
+    tags: ["동아리", "모집", "코딩"],
+    hasReports: false,
+    comments: [
+      { id: 1, author: "코딩꿈나무", content: "초보자도 정말 괜찮나요?? 관심있어요!", date: "2026-05-24", time: "15:00" },
+      { id: 2, author: "동아리장", content: "네! 완전 초보자분들도 기초부터 알려드려요~ 편하게 지원하세요!", date: "2026-05-24", time: "15:30" },
+    ]
+  },
 ]
 
 // Mock Reports Data
@@ -97,6 +325,8 @@ interface User {
   isAdmin: boolean
 }
 
+type ViewMode = "list" | "detail" | "write"
+
 export function CommunityBoard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState("free")
@@ -106,6 +336,19 @@ export function CommunityBoard() {
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const [reportTarget, setReportTarget] = useState<{ id: number; title: string; type: "post" | "comment" } | null>(null)
   const [selectedReasons, setSelectedReasons] = useState<string[]>([])
+  
+  // View state
+  const [viewMode, setViewMode] = useState<ViewMode>("list")
+  const [selectedPost, setSelectedPost] = useState<typeof MOCK_POSTS[0] | null>(null)
+  
+  // Write post state
+  const [newPostTitle, setNewPostTitle] = useState("")
+  const [newPostCategory, setNewPostCategory] = useState("free")
+  const [newPostContent, setNewPostContent] = useState("")
+  const [newPostTags, setNewPostTags] = useState("")
+  
+  // Comment state
+  const [newComment, setNewComment] = useState("")
   
   // Mock logged in user (change this to test admin functionality)
   const [currentUser] = useState<User>(() => {
@@ -138,15 +381,14 @@ export function CommunityBoard() {
     return matchesCategory && matchesSearch
   })
 
-  const handleReport = (postId: number, title: string, type: "post" | "comment" = "post") => {
-    setReportTarget({ id: postId, title, type })
+  const handleReport = (id: number, title: string, type: "post" | "comment" = "post") => {
+    setReportTarget({ id, title, type })
     setSelectedReasons([])
     setReportModalOpen(true)
   }
 
   const handleSubmitReport = () => {
     if (selectedReasons.length > 0 && reportTarget) {
-      console.log("[v0] Report submitted:", { target: reportTarget, reasons: selectedReasons })
       setReportModalOpen(false)
       setReportTarget(null)
       setSelectedReasons([])
@@ -159,6 +401,43 @@ export function CommunityBoard() {
         ? prev.filter(r => r !== reasonId)
         : [...prev, reasonId]
     )
+  }
+  
+  const handlePostClick = (post: typeof MOCK_POSTS[0]) => {
+    setSelectedPost(post)
+    setViewMode("detail")
+  }
+  
+  const handleBackToList = () => {
+    setSelectedPost(null)
+    setViewMode("list")
+    setNewComment("")
+  }
+  
+  const handleOpenWriteMode = () => {
+    setNewPostTitle("")
+    setNewPostCategory(selectedCategory === "all" ? "free" : selectedCategory)
+    setNewPostContent("")
+    setNewPostTags("")
+    setViewMode("write")
+  }
+  
+  const handleCancelWrite = () => {
+    setViewMode("list")
+  }
+  
+  const handleSubmitPost = () => {
+    if (newPostTitle.trim() && newPostContent.trim()) {
+      // In a real app, this would send to backend
+      setViewMode("list")
+    }
+  }
+  
+  const handleSubmitComment = () => {
+    if (newComment.trim()) {
+      // In a real app, this would send to backend
+      setNewComment("")
+    }
   }
 
   return (
@@ -309,7 +588,11 @@ export function CommunityBoard() {
               <Button
                 variant={showAdminDashboard ? "default" : "outline"}
                 className="w-full mb-4 justify-start gap-2"
-                onClick={() => setShowAdminDashboard(!showAdminDashboard)}
+                onClick={() => {
+                  setShowAdminDashboard(!showAdminDashboard)
+                  setViewMode("list")
+                  setSelectedPost(null)
+                }}
               >
                 <Shield className="w-4 h-4" />
                 관리자 대시보드
@@ -323,6 +606,8 @@ export function CommunityBoard() {
                   setSelectedCategory("all")
                   setShowAdminDashboard(false)
                   setSidebarOpen(false)
+                  setViewMode("list")
+                  setSelectedPost(null)
                 }}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
@@ -345,6 +630,8 @@ export function CommunityBoard() {
                         setSelectedCategory(category.id)
                         setShowAdminDashboard(false)
                         setSidebarOpen(false)
+                        setViewMode("list")
+                        setSelectedPost(null)
                       }}
                       className={cn(
                         "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
@@ -366,6 +653,10 @@ export function CommunityBoard() {
                         variant="outline"
                         size="sm"
                         className="w-full mt-2 ml-7 justify-start gap-2 text-xs border-dashed"
+                        onClick={() => {
+                          setNewPostCategory("notice")
+                          handleOpenWriteMode()
+                        }}
                       >
                         <Plus className="w-3 h-3" />
                         학사공지 작성
@@ -446,6 +737,288 @@ export function CommunityBoard() {
                 )}
               </div>
             </div>
+          ) : viewMode === "write" ? (
+            /* Write Post View */
+            <div className="max-w-3xl mx-auto">
+              <div className="mb-6">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelWrite}
+                  className="gap-2 text-muted-foreground hover:text-foreground mb-4"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  취소
+                </Button>
+                <h2 className="text-2xl font-bold text-foreground">새 글 쓰기</h2>
+                <p className="text-muted-foreground mt-1">게시글을 작성해주세요</p>
+              </div>
+
+              <div className="bg-card rounded-xl border border-border p-6 space-y-6">
+                {/* Title Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">제목</label>
+                  <Input
+                    placeholder="제목을 입력하세요"
+                    value={newPostTitle}
+                    onChange={(e) => setNewPostTitle(e.target.value)}
+                    className="h-12 text-base"
+                  />
+                </div>
+
+                {/* Category Selector */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">카테고리</label>
+                  <Select value={newPostCategory} onValueChange={setNewPostCategory}>
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="카테고리 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.filter(c => c.id !== "notice" || (isAdminMode && currentUser.isAdmin)).map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          <div className="flex items-center gap-2">
+                            <category.icon className="w-4 h-4" />
+                            {category.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Rich Text Editor Mockup */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">내용</label>
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    {/* Toolbar */}
+                    <div className="flex items-center gap-1 p-2 border-b border-border bg-secondary/30 flex-wrap">
+                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="굵게">
+                        <Bold className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="기울임">
+                        <Italic className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      <div className="w-px h-6 bg-border mx-1" />
+                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="글머리 기호">
+                        <List className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="번호 매기기">
+                        <ListOrdered className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      <div className="w-px h-6 bg-border mx-1" />
+                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="링크">
+                        <Link className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="이미지">
+                        <Image className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      <div className="w-px h-6 bg-border mx-1" />
+                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="인용">
+                        <Quote className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="코드">
+                        <Code className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    </div>
+                    {/* Text Area */}
+                    <Textarea
+                      placeholder="내용을 입력하세요...&#10;&#10;마크다운 문법을 지원합니다.&#10;- **굵게** 또는 *기울임*&#10;- ## 제목&#10;- 목록 항목"
+                      value={newPostContent}
+                      onChange={(e) => setNewPostContent(e.target.value)}
+                      className="min-h-[300px] border-0 rounded-none resize-none focus-visible:ring-0 text-base leading-relaxed"
+                    />
+                  </div>
+                </div>
+
+                {/* Tags Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Tag className="w-4 h-4" />
+                    태그
+                  </label>
+                  <Input
+                    placeholder="태그를 쉼표(,)로 구분하여 입력하세요 (예: 질문, 수학, 시험)"
+                    value={newPostTags}
+                    onChange={(e) => setNewPostTags(e.target.value)}
+                    className="h-12"
+                  />
+                  <p className="text-xs text-muted-foreground">태그는 게시글 검색에 도움이 됩니다</p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+                  <Button variant="outline" onClick={handleCancelWrite} className="px-6">
+                    취소
+                  </Button>
+                  <Button 
+                    onClick={handleSubmitPost}
+                    disabled={!newPostTitle.trim() || !newPostContent.trim()}
+                    className="px-6 gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    등록
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : viewMode === "detail" && selectedPost ? (
+            /* Post Detail View */
+            <div className="max-w-3xl mx-auto">
+              {/* Back Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleBackToList}
+                className="gap-2 text-muted-foreground hover:text-foreground mb-4"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                목록으로 돌아가기
+              </Button>
+
+              {/* Post Content */}
+              <article className="bg-card rounded-xl border border-border overflow-hidden">
+                {/* Post Header */}
+                <div className="p-6 border-b border-border">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge className={cn("text-xs font-medium", getCategoryColor(selectedPost.category))}>
+                      {getCategoryName(selectedPost.category)}
+                    </Badge>
+                    {selectedPost.hasReports && isAdminMode && (
+                      <Badge variant="outline" className="text-xs text-red-600 border-red-200">
+                        신고됨
+                      </Badge>
+                    )}
+                  </div>
+                  <h1 className="text-2xl font-bold text-foreground mb-4 text-balance">
+                    {selectedPost.title}
+                  </h1>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-10 h-10">
+                        <AvatarFallback className="bg-secondary text-foreground">
+                          {selectedPost.author.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{selectedPost.author}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {selectedPost.date} {selectedPost.time}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-red-600 hover:bg-red-50 gap-1.5"
+                      onClick={() => handleReport(selectedPost.id, selectedPost.title)}
+                    >
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-xs">신고</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Post Body */}
+                <div className="p-6">
+                  <div className="prose prose-sm max-w-none text-foreground leading-relaxed whitespace-pre-wrap">
+                    {selectedPost.content}
+                  </div>
+                  
+                  {/* Tags */}
+                  {selectedPost.tags && selectedPost.tags.length > 0 && (
+                    <div className="flex items-center gap-2 mt-6 pt-6 border-t border-border flex-wrap">
+                      <Tag className="w-4 h-4 text-muted-foreground" />
+                      {selectedPost.tags.map((tag, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          #{tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </article>
+
+              {/* Comments Section */}
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5" />
+                  댓글 {selectedPost.comments.length}개
+                </h3>
+
+                {/* Comment Input */}
+                <div className="bg-card rounded-xl border border-border p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <Avatar className="w-8 h-8 shrink-0">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                        {currentUser.nickname.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <Textarea
+                        placeholder="댓글을 작성하세요..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        className="min-h-[80px] resize-none"
+                      />
+                      <div className="flex justify-end mt-3">
+                        <Button 
+                          size="sm" 
+                          onClick={handleSubmitComment}
+                          disabled={!newComment.trim()}
+                          className="gap-2"
+                        >
+                          <Send className="w-4 h-4" />
+                          댓글 등록
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Comments List */}
+                <div className="space-y-3">
+                  {selectedPost.comments.map((comment) => (
+                    <div key={comment.id} className="bg-card rounded-xl border border-border p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 flex-1">
+                          <Avatar className="w-8 h-8 shrink-0">
+                            <AvatarFallback className="bg-secondary text-foreground text-xs">
+                              {comment.author.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-medium text-foreground">{comment.author}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {comment.date} {comment.time}
+                              </span>
+                            </div>
+                            <p className="text-sm text-foreground leading-relaxed">
+                              {comment.content}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="shrink-0 text-muted-foreground hover:text-red-600 hover:bg-red-50 gap-1 h-8 px-2"
+                          onClick={() => handleReport(comment.id, comment.content, "comment")}
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          <span className="text-xs">신고</span>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {selectedPost.comments.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground bg-card rounded-xl border border-border">
+                      아직 댓글이 없습니다. 첫 댓글을 작성해보세요!
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           ) : (
             /* Posts List */
             <div className="max-w-4xl mx-auto">
@@ -458,9 +1031,9 @@ export function CommunityBoard() {
                     {filteredPosts.length}개의 게시글
                   </p>
                 </div>
-                <Button className="gap-2">
+                <Button className="gap-2" onClick={handleOpenWriteMode}>
                   <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline">글쓰기</span>
+                  <span className="hidden sm:inline">새 글 쓰기</span>
                 </Button>
               </div>
 
@@ -469,6 +1042,7 @@ export function CommunityBoard() {
                   <article
                     key={post.id}
                     className="bg-card rounded-xl border border-border p-4 hover:border-primary/30 transition-colors cursor-pointer"
+                    onClick={() => handlePostClick(post)}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
@@ -489,6 +1063,11 @@ export function CommunityBoard() {
                           <span>{post.author}</span>
                           <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
                           <span>{post.date}</span>
+                          <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                          <span className="flex items-center gap-1">
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            {post.comments.length}
+                          </span>
                         </div>
                       </div>
                       
@@ -525,7 +1104,7 @@ export function CommunityBoard() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-red-500" />
-              게시글 신고
+              {reportTarget?.type === "comment" ? "댓글 신고" : "게시글 신고"}
             </DialogTitle>
             <DialogDescription className="text-left">
               {reportTarget && (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
   Search,
@@ -91,8 +91,52 @@ const CATEGORIES = [
   { id: "career", name: "진로/상담", icon: Compass },
 ]
 
-// Mock Posts Data with content
-const MOCK_POSTS = [
+// Interfaces
+interface Comment {
+  id: number
+  author: string
+  content: string
+  date: string
+  time: string
+}
+
+interface Post {
+  id: number
+  title: string
+  category: string
+  author: string
+  date: string
+  time: string
+  content: string
+  tags: string[]
+  hasReports: boolean
+  comments: Comment[]
+}
+
+interface Report {
+  id: number
+  type: "post" | "comment"
+  targetId: number
+  title: string
+  reason: string
+  reporter: string
+  date: string
+  status: "pending" | "sanctioned"
+}
+
+interface UserProfile {
+  id: string
+  nickname: string
+  isAdmin: boolean
+  realName: string
+  studentId: string
+  email: string
+  profileImage?: string
+  lastNicknameChange?: string
+}
+
+// Initial Posts Data
+const INITIAL_POSTS: Post[] = [
   { 
     id: 1, 
     title: "내일 체육대회 준비물 뭐예요?", 
@@ -311,11 +355,11 @@ In conclusion, we must protect our environment together.
   },
 ]
 
-// Mock Reports Data
-const MOCK_REPORTS = [
-  { id: 1, type: "post", targetId: 2, title: "중간고사 범위 정리해봤습니다", reason: "불법 광고 (도박/마약 등)", reporter: "익명", date: "2026-05-27" },
-  { id: 2, type: "comment", targetId: 5, title: "진로상담 신청 방법 알려주세요", reason: "욕설/비방", reporter: "익명", date: "2026-05-26" },
-  { id: 3, type: "post", targetId: 8, title: "동아리 모집 공고", reason: "기타", reporter: "익명", date: "2026-05-24" },
+// Initial Reports Data
+const INITIAL_REPORTS: Report[] = [
+  { id: 1, type: "post", targetId: 2, title: "중간고사 범위 정리해봤습니다", reason: "불법 광고 (도박/마약 등)", reporter: "익명", date: "2026-05-27", status: "pending" },
+  { id: 2, type: "comment", targetId: 5, title: "진로상담 신청 방법 알려주세요", reason: "욕설/비방", reporter: "익명", date: "2026-05-26", status: "pending" },
+  { id: 3, type: "post", targetId: 8, title: "동아리 모집 공고", reason: "기타", reporter: "익명", date: "2026-05-24", status: "pending" },
 ]
 
 // Report Reasons
@@ -326,21 +370,17 @@ const REPORT_REASONS = [
   { id: "other", label: "기타" },
 ]
 
-interface User {
-  id: string
-  nickname: string
-  isAdmin: boolean
-  realName: string
-  studentId: string
-  email: string
-  profileImage?: string
-  lastNicknameChange?: string // Date string for 7-day rule
-}
-
 type ViewMode = "list" | "detail" | "write"
 
 export function CommunityBoard() {
   const router = useRouter()
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  
+  // Core state
+  const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS)
+  const [reports, setReports] = useState<Report[]>(INITIAL_REPORTS)
+  const [deletingReportId, setDeletingReportId] = useState<number | null>(null)
+  
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState("free")
   const [searchQuery, setSearchQuery] = useState("")
@@ -352,7 +392,7 @@ export function CommunityBoard() {
   
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>("list")
-  const [selectedPost, setSelectedPost] = useState<typeof MOCK_POSTS[0] | null>(null)
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   
   // Write post state
   const [newPostTitle, setNewPostTitle] = useState("")
@@ -372,8 +412,15 @@ export function CommunityBoard() {
   // Logout alert state
   const [showLogoutAlert, setShowLogoutAlert] = useState(false)
   
-  // Mock logged in user (change this to test admin functionality)
-  const [currentUser, setCurrentUser] = useState<User>(() => {
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
+  
+  // Sanction modal state
+  const [sanctionModalOpen, setSanctionModalOpen] = useState(false)
+  const [sanctionTargetReport, setSanctionTargetReport] = useState<Report | null>(null)
+  
+  // Mock logged in user
+  const [currentUser, setCurrentUser] = useState<UserProfile>(() => {
     const admin = ADMIN_ACCOUNTS[0]
     return { 
       id: admin.id, 
@@ -382,9 +429,15 @@ export function CommunityBoard() {
       realName: "김관리",
       studentId: "ADMIN",
       email: "admin@school.hs.kr",
-      lastNicknameChange: "2026-05-15" // 13 days ago, can change
+      lastNicknameChange: "2026-05-15"
     }
   })
+
+  // Toast helper
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   const getCategoryName = (categoryId: string) => {
     return CATEGORIES.find(c => c.id === categoryId)?.name || categoryId
@@ -404,7 +457,7 @@ export function CommunityBoard() {
     return colors[categoryId] || "bg-gray-100 text-gray-700"
   }
 
-  const filteredPosts = MOCK_POSTS.filter(post => {
+  const filteredPosts = posts.filter(post => {
     const matchesCategory = selectedCategory === "all" || post.category === selectedCategory
     const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          post.author.toLowerCase().includes(searchQuery.toLowerCase())
@@ -422,6 +475,7 @@ export function CommunityBoard() {
       setReportModalOpen(false)
       setReportTarget(null)
       setSelectedReasons([])
+      showToast("신고가 접수되었습니다.")
     }
   }
 
@@ -433,7 +487,7 @@ export function CommunityBoard() {
     )
   }
   
-  const handlePostClick = (post: typeof MOCK_POSTS[0]) => {
+  const handlePostClick = (post: Post) => {
     setSelectedPost(post)
     setViewMode("detail")
   }
@@ -456,21 +510,118 @@ export function CommunityBoard() {
     setViewMode("list")
   }
   
+  // Submit new post - adds to state
   const handleSubmitPost = () => {
     if (newPostTitle.trim() && newPostContent.trim()) {
-      // In a real app, this would send to backend
+      const now = new Date()
+      const newPost: Post = {
+        id: Date.now(),
+        title: newPostTitle.trim(),
+        category: newPostCategory,
+        author: currentUser.nickname,
+        date: now.toISOString().split("T")[0],
+        time: now.toTimeString().slice(0, 5),
+        content: newPostContent.trim(),
+        tags: newPostTags.split(",").map(t => t.trim()).filter(Boolean),
+        hasReports: false,
+        comments: []
+      }
+      setPosts(prev => [newPost, ...prev])
       setViewMode("list")
+      showToast("게시글이 성공적으로 등록되었습니다.")
     }
   }
   
+  // Submit comment - adds to post
   const handleSubmitComment = () => {
-    if (newComment.trim()) {
-      // In a real app, this would send to backend
+    if (newComment.trim() && selectedPost) {
+      const now = new Date()
+      const newCommentObj: Comment = {
+        id: Date.now(),
+        author: currentUser.nickname,
+        content: newComment.trim(),
+        date: now.toISOString().split("T")[0],
+        time: now.toTimeString().slice(0, 5),
+      }
+      
+      // Update the post with new comment
+      const updatedPost = {
+        ...selectedPost,
+        comments: [...selectedPost.comments, newCommentObj]
+      }
+      
+      setPosts(prev => prev.map(p => p.id === selectedPost.id ? updatedPost : p))
+      setSelectedPost(updatedPost)
       setNewComment("")
+      showToast("댓글이 등록되었습니다.")
     }
   }
   
-  // Calculate if nickname can be changed (7-day rule)
+  // Editor toolbar functions
+  const insertMarkdown = (syntax: string, wrap: boolean = true) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selectedText = newPostContent.substring(start, end)
+    
+    let newText: string
+    if (wrap && selectedText) {
+      newText = newPostContent.substring(0, start) + syntax + selectedText + syntax + newPostContent.substring(end)
+    } else {
+      newText = newPostContent.substring(0, start) + syntax + newPostContent.substring(end)
+    }
+    
+    setNewPostContent(newText)
+    
+    // Restore focus
+    setTimeout(() => {
+      textarea.focus()
+      const newCursorPos = wrap && selectedText ? end + syntax.length * 2 : start + syntax.length
+      textarea.setSelectionRange(newCursorPos, newCursorPos)
+    }, 0)
+  }
+  
+  const handleBold = () => insertMarkdown("**")
+  const handleItalic = () => insertMarkdown("*")
+  const handleBulletList = () => insertMarkdown("\n- ", false)
+  const handleNumberedList = () => insertMarkdown("\n1. ", false)
+  const handleLink = () => insertMarkdown("[링크텍스트](URL)", false)
+  const handleImage = () => insertMarkdown("![이미지설명](이미지URL)", false)
+  const handleQuote = () => insertMarkdown("\n> ", false)
+  const handleCode = () => insertMarkdown("`")
+  
+  // Admin actions
+  const handleDeleteContent = (report: Report) => {
+    setDeletingReportId(report.id)
+    
+    setTimeout(() => {
+      setReports(prev => prev.filter(r => r.id !== report.id))
+      setDeletingReportId(null)
+      showToast("해당 컨텐츠가 성공적으로 삭제되었습니다.")
+    }, 300)
+  }
+  
+  const handleOpenSanctionModal = (report: Report) => {
+    setSanctionTargetReport(report)
+    setSanctionModalOpen(true)
+  }
+  
+  const handleConfirmSanction = () => {
+    if (sanctionTargetReport) {
+      setReports(prev => prev.map(r => 
+        r.id === sanctionTargetReport.id 
+          ? { ...r, status: "sanctioned" as const }
+          : r
+      ))
+      setSanctionModalOpen(false)
+      setSanctionTargetReport(null)
+      showToast("사용자 제재가 완료되었습니다.")
+    }
+  }
+  
+  // Nickname change logic
   const canChangeNickname = () => {
     if (!currentUser.lastNicknameChange) return true
     const lastChange = new Date(currentUser.lastNicknameChange)
@@ -514,7 +665,6 @@ export function CommunityBoard() {
       return
     }
     
-    // Update nickname
     const today = new Date().toISOString().split("T")[0]
     setCurrentUser(prev => ({
       ...prev,
@@ -533,6 +683,25 @@ export function CommunityBoard() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className={cn(
+            "px-4 py-3 rounded-lg shadow-lg flex items-center gap-3",
+            toast.type === "success" 
+              ? "bg-primary text-primary-foreground" 
+              : "bg-destructive text-destructive-foreground"
+          )}>
+            {toast.type === "success" ? (
+              <CheckCircle className="w-5 h-5" />
+            ) : (
+              <AlertCircle className="w-5 h-5" />
+            )}
+            <span className="text-sm font-medium">{toast.message}</span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card border-b border-border">
         <div className="flex items-center justify-between h-16 px-4 lg:px-6">
@@ -778,13 +947,22 @@ export function CommunityBoard() {
                         <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">유형</th>
                         <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">제목</th>
                         <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">신고 사유</th>
+                        <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">상태</th>
                         <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">신고일</th>
                         <th className="text-right px-4 py-3 text-sm font-semibold text-foreground">관리</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {MOCK_REPORTS.map((report) => (
-                        <tr key={report.id} className="hover:bg-secondary/30 transition-colors">
+                      {reports.map((report) => (
+                        <tr 
+                          key={report.id} 
+                          className={cn(
+                            "transition-all duration-300",
+                            deletingReportId === report.id 
+                              ? "opacity-0 translate-x-4" 
+                              : "hover:bg-secondary/30"
+                          )}
+                        >
                           <td className="px-4 py-3">
                             <Badge variant="outline" className="text-xs">
                               {report.type === "post" ? "게시글" : "댓글"}
@@ -801,17 +979,45 @@ export function CommunityBoard() {
                             </Badge>
                           </td>
                           <td className="px-4 py-3">
+                            <Badge 
+                              className={cn(
+                                "text-xs",
+                                report.status === "sanctioned" 
+                                  ? "bg-orange-100 text-orange-700" 
+                                  : "bg-blue-100 text-blue-700"
+                              )}
+                            >
+                              {report.status === "sanctioned" ? "제재 완료" : "처리 대기"}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3">
                             <span className="text-sm text-muted-foreground">{report.date}</span>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-end gap-2">
-                              <Button variant="outline" size="sm" className="h-8 gap-1 text-xs">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 gap-1 text-xs"
+                                onClick={() => handleDeleteContent(report)}
+                              >
                                 <Trash2 className="w-3 h-3" />
                                 {report.type === "post" ? "게시글 삭제" : "댓글 삭제"}
                               </Button>
-                              <Button variant="outline" size="sm" className="h-8 gap-1 text-xs text-destructive hover:text-destructive">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className={cn(
+                                  "h-8 gap-1 text-xs",
+                                  report.status === "sanctioned" 
+                                    ? "text-muted-foreground" 
+                                    : "text-destructive hover:text-destructive"
+                                )}
+                                onClick={() => handleOpenSanctionModal(report)}
+                                disabled={report.status === "sanctioned"}
+                              >
                                 <UserX className="w-3 h-3" />
-                                사용자 제재
+                                {report.status === "sanctioned" ? "제재됨" : "사용자 제재"}
                               </Button>
                             </div>
                           </td>
@@ -821,7 +1027,7 @@ export function CommunityBoard() {
                   </table>
                 </div>
                 
-                {MOCK_REPORTS.length === 0 && (
+                {reports.length === 0 && (
                   <div className="text-center py-12 text-muted-foreground">
                     신고된 내용이 없습니다
                   </div>
@@ -877,43 +1083,84 @@ export function CommunityBoard() {
                   </Select>
                 </div>
 
-                {/* Rich Text Editor Mockup */}
+                {/* Rich Text Editor */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">내용</label>
                   <div className="border border-border rounded-lg overflow-hidden">
                     {/* Toolbar */}
                     <div className="flex items-center gap-1 p-2 border-b border-border bg-secondary/30 flex-wrap">
-                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="굵게">
+                      <button 
+                        type="button"
+                        onClick={handleBold}
+                        className="p-2 hover:bg-secondary rounded transition-colors" 
+                        title="굵게 (**텍스트**)"
+                      >
                         <Bold className="w-4 h-4 text-muted-foreground" />
                       </button>
-                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="기울임">
+                      <button 
+                        type="button"
+                        onClick={handleItalic}
+                        className="p-2 hover:bg-secondary rounded transition-colors" 
+                        title="기울임 (*텍스트*)"
+                      >
                         <Italic className="w-4 h-4 text-muted-foreground" />
                       </button>
                       <div className="w-px h-6 bg-border mx-1" />
-                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="글머리 기호">
+                      <button 
+                        type="button"
+                        onClick={handleBulletList}
+                        className="p-2 hover:bg-secondary rounded transition-colors" 
+                        title="글머리 기호"
+                      >
                         <List className="w-4 h-4 text-muted-foreground" />
                       </button>
-                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="번호 매기기">
+                      <button 
+                        type="button"
+                        onClick={handleNumberedList}
+                        className="p-2 hover:bg-secondary rounded transition-colors" 
+                        title="번호 매기기"
+                      >
                         <ListOrdered className="w-4 h-4 text-muted-foreground" />
                       </button>
                       <div className="w-px h-6 bg-border mx-1" />
-                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="링크">
+                      <button 
+                        type="button"
+                        onClick={handleLink}
+                        className="p-2 hover:bg-secondary rounded transition-colors" 
+                        title="링크 삽입"
+                      >
                         <Link className="w-4 h-4 text-muted-foreground" />
                       </button>
-                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="이미지">
+                      <button 
+                        type="button"
+                        onClick={handleImage}
+                        className="p-2 hover:bg-secondary rounded transition-colors" 
+                        title="이미지 삽입"
+                      >
                         <Image className="w-4 h-4 text-muted-foreground" />
                       </button>
                       <div className="w-px h-6 bg-border mx-1" />
-                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="인용">
+                      <button 
+                        type="button"
+                        onClick={handleQuote}
+                        className="p-2 hover:bg-secondary rounded transition-colors" 
+                        title="인용"
+                      >
                         <Quote className="w-4 h-4 text-muted-foreground" />
                       </button>
-                      <button className="p-2 hover:bg-secondary rounded transition-colors" title="코드">
+                      <button 
+                        type="button"
+                        onClick={handleCode}
+                        className="p-2 hover:bg-secondary rounded transition-colors" 
+                        title="코드"
+                      >
                         <Code className="w-4 h-4 text-muted-foreground" />
                       </button>
                     </div>
                     {/* Text Area */}
                     <Textarea
-                      placeholder="내용을 입력하세요...&#10;&#10;마크다운 문법을 지원합니다.&#10;- **굵게** 또는 *기울임*&#10;- ## 제목&#10;- 목록 항목"
+                      ref={textareaRef}
+                      placeholder={`내용을 입력하세요...\n\n마크다운 문법을 지원합니다.\n- **굵게** 또는 *기울임*\n- ## 제목\n- 목록 항목`}
                       value={newPostContent}
                       onChange={(e) => setNewPostContent(e.target.value)}
                       className="min-h-[300px] border-0 rounded-none resize-none focus-visible:ring-0 text-base leading-relaxed"
@@ -1049,6 +1296,12 @@ export function CommunityBoard() {
                         placeholder="댓글을 작성하세요..."
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey && newComment.trim()) {
+                            e.preventDefault()
+                            handleSubmitComment()
+                          }
+                        }}
                         className="min-h-[80px] resize-none"
                       />
                       <div className="flex justify-end mt-3">
@@ -1069,7 +1322,7 @@ export function CommunityBoard() {
                 {/* Comments List */}
                 <div className="space-y-3">
                   {selectedPost.comments.map((comment) => (
-                    <div key={comment.id} className="bg-card rounded-xl border border-border p-4">
+                    <div key={comment.id} className="bg-card rounded-xl border border-border p-4 animate-in fade-in duration-300">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3 flex-1">
                           <Avatar className="w-8 h-8 shrink-0">
@@ -1353,6 +1606,50 @@ export function CommunityBoard() {
               disabled={newNickname === currentUser.nickname || !newNickname.trim()}
             >
               저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sanction Confirmation Modal */}
+      <Dialog open={sanctionModalOpen} onOpenChange={setSanctionModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserX className="w-5 h-5 text-destructive" />
+              사용자 제재 확인
+            </DialogTitle>
+            <DialogDescription>
+              해당 사용자를 제재하시겠습니까?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="p-4 bg-secondary rounded-lg space-y-2">
+              <p className="text-sm text-foreground">
+                <span className="font-medium">신고 대상:</span> {sanctionTargetReport?.title}
+              </p>
+              <p className="text-sm text-foreground">
+                <span className="font-medium">신고 사유:</span> {sanctionTargetReport?.reason}
+              </p>
+            </div>
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800 font-medium flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                해당 사용자를 7일간 정지하시겠습니까?
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setSanctionModalOpen(false)}>
+              취소
+            </Button>
+            <Button
+              onClick={handleConfirmSanction}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              제재 확정
             </Button>
           </DialogFooter>
         </DialogContent>

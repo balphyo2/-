@@ -32,7 +32,6 @@ import {
   List,
   ListOrdered,
   Link,
-  Image,
   Quote,
   Code,
   User,
@@ -439,6 +438,54 @@ export function CommunityBoard() {
     setTimeout(() => setToast(null), 3000)
   }
 
+  // Markdown parser for rendering bold and italic text
+  const parseMarkdown = (text: string): React.ReactNode[] => {
+    const parts: React.ReactNode[] = []
+    let remaining = text
+    let key = 0
+
+    while (remaining.length > 0) {
+      // Check for bold (**text**)
+      const boldMatch = remaining.match(/\*\*(.+?)\*\*/)
+      // Check for italic (*text*)
+      const italicMatch = remaining.match(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/)
+
+      if (boldMatch && (!italicMatch || boldMatch.index! <= italicMatch.index!)) {
+        // Add text before bold
+        if (boldMatch.index! > 0) {
+          parts.push(<span key={key++}>{remaining.substring(0, boldMatch.index)}</span>)
+        }
+        // Add bold text
+        parts.push(<strong key={key++} className="font-bold">{boldMatch[1]}</strong>)
+        remaining = remaining.substring(boldMatch.index! + boldMatch[0].length)
+      } else if (italicMatch) {
+        // Add text before italic
+        if (italicMatch.index! > 0) {
+          parts.push(<span key={key++}>{remaining.substring(0, italicMatch.index)}</span>)
+        }
+        // Add italic text
+        parts.push(<em key={key++} className="italic">{italicMatch[1]}</em>)
+        remaining = remaining.substring(italicMatch.index! + italicMatch[0].length)
+      } else {
+        // No more matches, add remaining text
+        parts.push(<span key={key++}>{remaining}</span>)
+        break
+      }
+    }
+
+    return parts
+  }
+
+  // Parse content with line breaks and markdown
+  const renderContent = (content: string): React.ReactNode => {
+    return content.split('\n').map((line, lineIndex) => (
+      <span key={lineIndex}>
+        {parseMarkdown(line)}
+        {lineIndex < content.split('\n').length - 1 && <br />}
+      </span>
+    ))
+  }
+
   const getCategoryName = (categoryId: string) => {
     return CATEGORIES.find(c => c.id === categoryId)?.name || categoryId
   }
@@ -472,10 +519,32 @@ export function CommunityBoard() {
 
   const handleSubmitReport = () => {
     if (selectedReasons.length > 0 && reportTarget) {
+      const now = new Date()
+      const newReport: Report = {
+        id: Date.now(),
+        type: reportTarget.type,
+        targetId: reportTarget.id,
+        title: reportTarget.title,
+        reason: selectedReasons.map(r => REPORT_REASONS.find(reason => reason.id === r)?.label).join(", "),
+        reporter: "익명",
+        date: now.toISOString().split("T")[0],
+        status: "pending"
+      }
+      
+      // Add to reports array (instantly appears in admin dashboard)
+      setReports(prev => [newReport, ...prev])
+      
+      // Mark the post as having reports
+      if (reportTarget.type === "post") {
+        setPosts(prev => prev.map(p => 
+          p.id === reportTarget.id ? { ...p, hasReports: true } : p
+        ))
+      }
+      
       setReportModalOpen(false)
       setReportTarget(null)
       setSelectedReasons([])
-      showToast("신고가 접수되었습니다.")
+      showToast("신고가 접수되었습니다. 관리자가 검토 후 조치합니다.")
     }
   }
 
@@ -588,16 +657,43 @@ export function CommunityBoard() {
   const handleBulletList = () => insertMarkdown("\n- ", false)
   const handleNumberedList = () => insertMarkdown("\n1. ", false)
   const handleLink = () => insertMarkdown("[링크텍스트](URL)", false)
-  const handleImage = () => insertMarkdown("![이미지설명](이미지URL)", false)
   const handleQuote = () => insertMarkdown("\n> ", false)
   const handleCode = () => insertMarkdown("`")
   
-  // Admin actions
+  // Admin actions - delete content from both dashboard and board
   const handleDeleteContent = (report: Report) => {
     setDeletingReportId(report.id)
     
     setTimeout(() => {
+      // Remove from reports array
       setReports(prev => prev.filter(r => r.id !== report.id))
+      
+      // Also delete from posts/comments
+      if (report.type === "post") {
+        // Delete the post from posts array
+        setPosts(prev => prev.filter(p => p.id !== report.targetId))
+        
+        // If viewing the deleted post, go back to list
+        if (selectedPost?.id === report.targetId) {
+          setSelectedPost(null)
+          setViewMode("list")
+        }
+      } else {
+        // Delete the comment from the post
+        setPosts(prev => prev.map(post => ({
+          ...post,
+          comments: post.comments.filter(c => c.id !== report.targetId)
+        })))
+        
+        // Update selected post if viewing
+        if (selectedPost) {
+          setSelectedPost(prev => prev ? {
+            ...prev,
+            comments: prev.comments.filter(c => c.id !== report.targetId)
+          } : null)
+        }
+      }
+      
       setDeletingReportId(null)
       showToast("해당 컨텐츠가 성공적으로 삭제되었습니다.")
     }, 300)
@@ -1131,14 +1227,6 @@ export function CommunityBoard() {
                       >
                         <Link className="w-4 h-4 text-muted-foreground" />
                       </button>
-                      <button 
-                        type="button"
-                        onClick={handleImage}
-                        className="p-2 hover:bg-secondary rounded transition-colors" 
-                        title="이미지 삽입"
-                      >
-                        <Image className="w-4 h-4 text-muted-foreground" />
-                      </button>
                       <div className="w-px h-6 bg-border mx-1" />
                       <button 
                         type="button"
@@ -1258,8 +1346,8 @@ export function CommunityBoard() {
 
                 {/* Post Body */}
                 <div className="p-6">
-                  <div className="prose prose-sm max-w-none text-foreground leading-relaxed whitespace-pre-wrap">
-                    {selectedPost.content}
+                  <div className="prose prose-sm max-w-none text-foreground leading-relaxed">
+                    {renderContent(selectedPost.content)}
                   </div>
                   
                   {/* Tags */}
@@ -1338,7 +1426,7 @@ export function CommunityBoard() {
                               </span>
                             </div>
                             <p className="text-sm text-foreground leading-relaxed">
-                              {comment.content}
+                              {renderContent(comment.content)}
                             </p>
                           </div>
                         </div>

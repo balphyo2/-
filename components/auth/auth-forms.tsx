@@ -49,6 +49,11 @@ export function AuthForms() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
+    // Easter egg: redirect to secret game if credentials are "Easteregg!!"
+    if (loginEmail === "Easteregg!!" && loginPassword === "Easteregg!!") {
+      router.push("/secret-game")
+      return
+    }
     router.push("/board")
   }
 

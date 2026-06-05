@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>던전 로그라이크</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{--bg:#07050f;--gold:#d4a017;--text:#c4b5e8;--dim:#6b5a8a;--danger:#ef4444;}
+body{background:var(--bg);overflow:hidden;font-family:'Noto Serif KR',serif;touch-action:none;user-select:none;}
+canvas{display:block;position:fixed;top:0;left:0;}
+#stars{z-index:0;}#game{z-index:1;}#uic{z-index:2;position:fixed;top:0;left:0;pointer-events:none;}
+#ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;}
+#hud{position:absolute;top:12px;left:12px;background:rgba(5,3,15,.92);border:1px solid rgba(124,58,237,.4);border-radius:10px;padding:10px 14px;min-width:240px;}
+.hud-name{font-size:13px;font-weight:700;letter-spacing:.05em;margin-bottom:7px;}
+.bar-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.bar-label{font-size:10px;color:var(--dim);width:28px;}
+.bar-track{flex:1;height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;transition:width .15s;}
+.bar-fill.hp{background:linear-gradient(90deg,#16a34a,#4ade80);}
+.bar-fill.exp{background:linear-gradient(90deg,#4f46e5,#818cf8);}
+.bar-fill.rune{background:linear-gradient(90deg,#1d4ed8,#60a5fa);}
+.hud-stats{font-size:10px;color:var(--dim);margin-top:3px;}.hud-stats span{color:var(--text);}
+#floor-info{position:absolute;top:12px;right:12px;text-align:right;background:rgba(5,3,15,.92);border:1px solid rgba(124,58,237,.4);border-radius:10px;padding:8px 14px;}
+.floor-num{font-size:20px;color:var(--gold);font-family:'Cinzel Decorative',serif;}
+.floor-theme{font-size:10px;margin-top:1px;}.floor-kills{font-size:10px;color:var(--dim);margin-top:2px;}
+#room-banner{position:absolute;top:18%;left:50%;transform:translateX(-50%);font-size:14px;color:#fff;background:rgba(5,3,15,.9);border-radius:20px;padding:7px 20px;border:1px solid rgba(255,255,255,.15);pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap;}
+#messages{position:absolute;bottom:140px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;}
+.msg{font-size:12px;padding:4px 12px;background:rgba(5,3,15,.88);border-radius:20px;border:1px solid rgba(255,255,255,.12);white-space:nowrap;animation:msgfade 2.6s forwards;}
+@keyframes msgfade{0%{opacity:0;transform:translateY(8px)}10%{opacity:1;transform:translateY(0)}70%{opacity:1}100%{opacity:0}}
+#hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--dim);white-space:nowrap;}
+#btn-shield{position:absolute;bottom:110px;right:22px;width:56px;height:56px;background:rgba(30,100,220,.3);border:2px solid rgba(90,150,255,.65);border-radius:50%;color:#93c5fd;font-size:11px;font-family:'Noto Serif KR',serif;cursor:pointer;pointer-events:all;user-select:none;display:none;}
+.overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;pointer-events:all;background:rgba(4,2,12,.65);backdrop-filter:blur(4px);}
+.overlay.hidden{display:none;}
+.panel{background:rgba(6,4,18,.97);border:1px solid rgba(124,58,237,.45);border-radius:16px;padding:30px 36px;max-width:500px;width:92%;box-shadow:0 0 60px rgba(124,58,237,.18);}
+.panel h1{font-family:'Cinzel Decorative',serif;font-size:22px;color:var(--gold);text-align:center;margin-bottom:6px;}
+.panel h2{font-size:12px;color:var(--dim);text-align:center;margin-bottom:22px;letter-spacing:.08em;}
+.btn-primary{display:block;width:100%;padding:12px;margin-top:8px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.5);border-radius:8px;color:var(--text);font-size:13px;font-family:'Noto Serif KR',serif;cursor:pointer;letter-spacing:.04em;transition:all .18s;}
+.btn-primary:hover,.btn-primary:active{background:rgba(124,58,237,.35);color:#fff;}
+.job-card{display:flex;align-items:center;gap:12px;padding:10px 14px;margin-bottom:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;cursor:pointer;transition:all .18s;}
+.job-card.selected{background:rgba(255,255,255,.08);}
+.job-icon{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.job-info h3{font-size:13px;margin-bottom:2px;}.job-info p{font-size:10px;color:var(--dim);line-height:1.45;}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<canvas id="game"></canvas>
+<canvas id="uic"></canvas>
+<div id="ui">
+  <div id="hud">
+    <div class="hud-name" id="hud-name">마법 탱커 · Lv.1</div>
+    <div class="bar-row"><span class="bar-label">HP</span><div class="bar-track"><div class="bar-fill hp" id="bar-hp" style="width:100%"></div></div><span style="font-size:10px;color:var(--dim);width:62px;text-align:right" id="hp-text">200/200</span></div>
+    <div class="bar-row"><span class="bar-label">EXP</span><div class="bar-track"><div class="bar-fill exp" id="bar-exp" style="width:0%"></div></div></div>
+    <div class="bar-row" id="rune-row" style="display:none"><span class="bar-label" style="color:#6eb5ff">룬</span><div class="bar-track"><div class="bar-fill rune" id="bar-rune" style="width:0%"></div></div></div>
+    <div class="hud-stats">골드 <span id="hud-gold">0</span> · 킬 <span id="hud-kills">0</span> · ATK <span id="hud-atk">0</span></div>
+  </div>
+  <div id="floor-info">
+    <div class="floor-num" id="floor-num">B1F</div>
+    <div class="floor-theme" id="floor-theme">성역</div>
+    <div class="floor-kills" id="floor-kills">방 0/0</div>
+  </div>
+  <div id="room-banner"></div>
+  <div id="messages"></div>
+  <div id="hint">왼쪽 드래그 이동 · 오른쪽 탭 공격</div>
+  <button id="btn-shield">방패</button>
+</div>
+
+<div class="overlay" id="screen-lobby">
+  <div class="panel" style="text-align:center;">
+    <h1>던전 로그라이크</h1><h2>절차적 생성 · A* 실시간 난이도</h2>
+    <div style="font-size:11px;color:var(--dim);margin-bottom:22px;line-height:2;">왼쪽 드래그 이동 · 오른쪽 탭 공격<br>방 진입 시 문이 잠기고 적 처치 시 열립니다</div>
+    <button class="btn-primary" onclick="showJobSelect()" style="font-size:15px;padding:16px;border-color:rgba(212,160,23,.5);color:var(--gold);">✦ 탑 진입 ✦</button>
+  </div>
+</div>
+<div class="overlay hidden" id="screen-job">
+  <div class="panel">
+    <h1>직업 선택</h1><h2>당신의 길을 선택하라</h2>
+    <div id="job-list"></div>
+    <button class="btn-primary" onclick="startGame()" style="margin-top:16px;font-size:14px;padding:14px;border-color:rgba(212,160,23,.5);color:var(--gold);">✦ 던전 입장 ✦</button>
+  </div>
+</div>
+<div class="overlay hidden" id="screen-clear">
+  <div class="panel" style="text-align:center;">
+    <h1 id="clear-title">클리어!</h1><h2 id="clear-sub"></h2>
+    <div id="clear-stats" style="font-size:12px;color:var(--text);margin:16px 0;line-height:2.2;"></div>
+    <button class="btn-primary" onclick="nextFloor()" style="font-size:14px;padding:14px;border-color:rgba(212,160,23,.5);color:var(--gold);">▶ 다음 층 진입</button>
+    <button class="btn-primary" onclick="goLobby()" style="margin-top:8px;font-size:12px;">↩ 로비로 돌아가기</button>
+  </div>
+</div>
+<div class="overlay hidden" id="screen-dead">
+  <div class="panel" style="text-align:center;">
+    <h1 style="color:var(--danger);">사 망</h1><h2>모든 기억이 흩어진다</h2>
+    <div id="dead-stats" style="font-size:12px;color:var(--text);margin:16px 0;line-height:2.2;"></div>
+    <button class="btn-primary" onclick="goLobby()" style="font-size:14px;padding:14px;">↩ 로비로 돌아가기</button>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════
+// 상수
+// ════════════════════════════════════════
+const TILE=36;
+const COLS=4, ROWS=4;
+const CORR=5; // 복도 길이
+const MIN_MOBS=3;
+const BOSS_ROOM_SCALE=1.2; // 보스방 20% 크게
+
+const THEMES=[
+  {name:'성역',         wall:'#1a1230',wall2:'#261a42',floor:'#0e0b1c',floor2:'#161030',acc:'#7c3aed',rgb:'124,58,237'},
+  {name:'숲의 고대 유적',wall:'#0d1e0c',wall2:'#163018',floor:'#080f07',floor2:'#0f1a0e',acc:'#22c55e',rgb:'34,197,94'},
+  {name:'심해 신전',    wall:'#051220',wall2:'#081e35',floor:'#030a15',floor2:'#061220',acc:'#0ea5e9',rgb:'14,165,233'},
+  {name:'몽환의 정원',  wall:'#180c25',wall2:'#28143e',floor:'#0e0815',floor2:'#180f28',acc:'#d946ef',rgb:'217,70,239'},
+  {name:'기괴한 꿈',    wall:'#181622',wall2:'#242032',floor:'#0f0e18',floor2:'#16141e',acc:'#818cf8',rgb:'129,140,248'},
+  {name:'기괴한 꿈 II', wall:'#161616',wall2:'#222222',floor:'#0e0e0e',floor2:'#141414',acc:'#94a3b8',rgb:'148,163,184'},
+];
+
+const JOBS=[
+  {id:'tank',   name:'마법 탱커', icon:'🛡️',
+   desc:'근접 부채꼴 · 방패 피감 45% · 피격 7% 무적 · 고뎀 저공속',
+   hp:200, atk:60, baseSpd:4.53, shieldSpd:3.5, def:40,
+   color:'#6eb5ff',colorDark:'#1d4ed8',colorGlow:'110,181,255',hasShield:true},
+  {id:'warrior',name:'전사',      icon:'⚔️',
+   desc:'넓은 근접 부채꼴 · 균형형 · 강한 물리력',
+   hp:140, atk:42, baseSpd:3.9,  shieldSpd:3.9,  def:25,
+   color:'#f87171',colorDark:'#b91c1c',colorGlow:'248,113,113',hasShield:false},
+  {id:'mage',   name:'마법사',    icon:'✨',
+   desc:'원거리 관통 투사체 · 12% 크리티컬 · 고DPS',
+   hp:90,  atk:35, baseSpd:5.45, shieldSpd:5.45, def:10,
+   color:'#c084fc',colorDark:'#7e22ce',colorGlow:'192,132,252',hasShield:false},
+  {id:'archer', name:'궁수',      icon:'🏹',
+   desc:'원거리 빠른 투사체 · 10% 3연발 · 적중 7% 무적',
+   hp:105, atk:52, baseSpd:4.94, shieldSpd:4.94, def:15,
+   color:'#34d399',colorDark:'#065f46',colorGlow:'52,211,153',hasShield:false},
+  {id:'healer', name:'힐러',      icon:'💚',
+   desc:'원거리 투사체 · 3초마다 자가 회복 · 추후 업데이트',
+   hp:130, atk:22, baseSpd:3.45, shieldSpd:3.45, def:20,
+   color:'#fbbf24',colorDark:'#92400e',colorGlow:'251,191,36',hasShield:false},
+];
+
+// 타일: 0=빈공간(통과불가벽), 1=벽(잠긴문), 2=바닥, 3=복도, 4=문(닫힘), 5=문(열림), 6=포털, 7=상점
+// ★ 수정: 방 진입 시 문→1(벽), 클리어 시→0(빈공간, 렌더 안함=통로 개방)
+
+// ════════════════════════════════════════
+// 캔버스
+// ════════════════════════════════════════
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const sc=document.getElementById('stars'),sctx=sc.getContext('2d');
+const uic=document.getElementById('uic'),uctx=uic.getContext('2d');
+function resize(){ canvas.width=sc.width=uic.width=window.innerWidth; canvas.height=sc.height=uic.height=window.innerHeight; }
+resize(); window.addEventListener('resize',resize);
+
+const STARS=Array.from({length:150},()=>({x:Math.random()*4000,y:Math.random()*3000,r:Math.random()*1.4+.2,ph:Math.random()*6.28}));
+(function SL(){
+  sctx.clearRect(0,0,sc.width,sc.height);const t=Date.now()/1200;
+  STARS.forEach(s=>{const a=.2+Math.sin(t+s.ph)*.25;sctx.beginPath();sctx.arc(s.x%sc.width,s.y%sc.height,s.r,0,6.28);sctx.fillStyle=`rgba(200,185,255,${a})`;sctx.fill();});
+  requestAnimationFrame(SL);
+})();
+
+function rInt(a,b){return Math.floor(Math.random()*(b-a))+a;}
+
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    this.beginPath();this.moveTo(x+r,y);this.lineTo(x+w-r,y);this.quadraticCurveTo(x+w,y,x+w,y+r);
+    this.lineTo(x+w,y+h-r);this.quadraticCurveTo(x+w,y+h,x+w-r,y+h);this.lineTo(x+r,y+h);
+    this.quadraticCurveTo(x,y+h,x,y+h-r);this.lineTo(x,y+r);this.quadraticCurveTo(x,y,x+r,y);this.closePath();
+  };
+}
+
+// ════════════════════════════════════════
+// 조이스틱
+// ════════════════════════════════════════
+const JOY={active:false,id:-1,baseX:0,baseY:0,dx:0,dy:0,MAX_R:55};
+const RATK={active:false,id:-1};
+
+// ════════════════════════════════════════
+// 던전 생성 (완전 재설계)
+// - 방 크기: 랜덤 25~36 타일
+// - 고립된 방은 억지 복도로 연결 (splice 제거)
+// - 문: 방 진입 시→1(벽), 클리어 시→3(복도)
+// - 플레이어가 문 위에 있으면 잠금 안 함 (끼임 방지)
+// ════════════════════════════════════════
+const GRID_W=200, GRID_H=200; // 넉넉한 그리드
+
+class RoomDef{
+  constructor(tx,ty,tw,th,type='normal'){
+    this.tx=tx;this.ty=ty;this.tw=tw;this.th=th;this.type=type;
+    this.cleared=(type==='start');
+    this.enemies=[];this.adj=[];
+    // 문: {dir, tx, ty} 배열
+    this.doorList=[];
+    this.visited=false;
+  }
+  get cx(){return Math.floor(this.tx+this.tw/2);}
+  get cy(){return Math.floor(this.ty+this.th/2);}
+  get px(){return this.cx*TILE+TILE/2;}
+  get py(){return this.cy*TILE+TILE/2;}
+  // 방 진입 트리거 영역: 가장자리에서 2칸 안쪽
+  containsDeep(ptx,pty){
+    return ptx>=this.tx+2&&ptx<this.tx+this.tw-2&&pty>=this.ty+2&&pty<this.ty+this.th-2;
+  }
+}
+
+function buildDungeon(floor){
+  const grid=Array.from({length:GRID_W},()=>new Array(GRID_H).fill(0));
+  const rooms=[];
+
+  const numRooms=Math.min(6+Math.floor(floor/2), COLS*ROWS);
+
+  // 방 배치: 랜덤 크기(25~36), 겹치지 않게
+  const PAD=3;
+  let attempts=0;
+  while(rooms.length<numRooms&&attempts<2000){
+    attempts++;
+    // 보스방은 20% 크게
+    const isBoss=rooms.length===numRooms-1;
+    const minW=isBoss?Math.floor(12*BOSS_ROOM_SCALE):12;
+    const minH=isBoss?Math.floor(10*BOSS_ROOM_SCALE):10;
+    const tw=rInt(minW,19+(isBoss?4:0));
+    const th=rInt(minH,15+(isBoss?3:0));
+    const tx=rInt(2,GRID_W-tw-2);
+    const ty=rInt(2,GRID_H-th-2);
+    // 겹침 체크
+    let ok=true;
+    for(const r of rooms){
+      if(tx<r.tx+r.tw+PAD&&tx+tw+PAD>r.tx&&ty<r.ty+r.th+PAD&&ty+th+PAD>r.ty){ok=false;break;}
+    }
+    if(!ok) continue;
+    let type='normal';
+    if(rooms.length===0) type='start';
+    else if(rooms.length===numRooms-1) type='boss';
+    else if(rooms.length===Math.floor(numRooms/2)) type='shop';
+    const room=new RoomDef(tx,ty,tw,th,type);
+    rooms.push(room);
+    // 방 바닥 카빙
+    for(let x=tx;x<tx+tw;x++)
+      for(let y=ty;y<ty+th;y++)
+        grid[x][y]=2;
+  }
+
+  // MST로 방 연결 (억지 복도 방식)
+  // 모든 방을 반드시 연결
+  const connected=new Set([0]);
+  const doorTiles=new Set();
+
+  function carveCorridor(rA,rB){
+    rA.adj.push(rooms.indexOf(rB));
+    rB.adj.push(rooms.indexOf(rA));
+    // L자 복도: A중심→꺾임→B중심
+    const x1=rA.cx,y1=rA.cy,x2=rB.cx,y2=rB.cy;
+    // 복도 카빙
+    function put(x,y){if(x>=0&&x<GRID_W&&y>=0&&y<GRID_H&&grid[x][y]!==2) grid[x][y]=3;}
+    // 복도 3타일 너비로 카빙 (구멍 방지)
+    let cx=x1,cy=y1;
+    while(cx!==x2){const s=x2>cx?1:-1;put(cx,cy-1);put(cx,cy);put(cx,cy+1);cx+=s;}
+    while(cy!==y2){const s=y2>cy?1:-1;put(cx-1,cy);put(cx,cy);put(cx+1,cy);cy+=s;}
+
+    // 문 위치: A방 경계에서 복도 시작점 (2×2)
+    // 가로 복도면 A오른쪽 or A왼쪽 경계
+    // 세로 복도면 A아래 or A위 경계
+    // 문은 복도가 방과 만나는 지점 앞 2칸
+    function placeDoor(dx,dy,ownerRoom){
+      [[dx,dy],[dx+1,dy],[dx,dy+1],[dx+1,dy+1]].forEach(([x,y])=>{
+        if(x>=0&&x<GRID_W&&y>=0&&y<GRID_H){
+          grid[x][y]=4; // 닫힌 문
+          doorTiles.add(`${x},${y}`);
+        }
+      });
+      ownerRoom.doorList.push({tx:dx,ty:dy});
+    }
+    // A→B 방향으로 문 위치 찾기
+    if(Math.abs(x2-x1)>=Math.abs(y2-y1)){
+      // 가로 방향: A방 오른쪽/왼쪽 경계에 문
+      const doorX=x2>x1?rA.tx+rA.tw-2:rA.tx;
+      placeDoor(doorX,y1-1,rA);
+      const doorX2=x2>x1?rB.tx:rB.tx+rB.tw-2;
+      placeDoor(doorX2,y1-1,rB);
+    } else {
+      // 세로 방향: A방 아래/위 경계에 문
+      const doorY=y2>y1?rA.ty+rA.th-2:rA.ty;
+      placeDoor(x1-1,doorY,rA);
+      const doorY2=y2>y1?rB.ty:rB.ty+rB.th-2;
+      placeDoor(x1-1,doorY2,rB);
+    }
+  }
+
+  // Prim's MST
+  while(connected.size<rooms.length){
+    let bestDist=Infinity,bestA=-1,bestB=-1;
+    for(const a of connected){
+      for(let b=0;b<rooms.length;b++){
+        if(connected.has(b)) continue;
+        const d=Math.hypot(rooms[a].cx-rooms[b].cx,rooms[a].cy-rooms[b].cy);
+        if(d<bestDist){bestDist=d;bestA=a;bestB=b;}
+      }
+    }
+    if(bestA===-1) break;
+    connected.add(bestB);
+    carveCorridor(rooms[bestA],rooms[bestB]);
+  }
+
+  // 추가 랜덤 연결 (다양성)
+  for(let i=0;i<Math.floor(rooms.length/3);i++){
+    const a=rInt(0,rooms.length),b=rInt(0,rooms.length);
+    if(a!==b&&!rooms[a].adj.includes(b)){
+      carveCorridor(rooms[a],rooms[b]);
+    }
+  }
+
+  // 특수 타일
+  const bR=rooms.find(r=>r.type==='boss');
+  if(bR) grid[bR.cx][bR.cy]=6;
+  rooms.forEach(r=>{if(r.type==='shop') grid[r.cx][r.cy]=7;});
+
+  // 벽 생성 (문 타일 보호)
+  for(let x=0;x<GRID_W;x++)
+    for(let y=0;y<GRID_H;y++){
+      if(grid[x][y]!==0||doorTiles.has(`${x},${y}`)) continue;
+      let near=false;
+      for(let dx=-1;dx<=1&&!near;dx++)
+        for(let dy=-1;dy<=1&&!near;dy++){
+          const nx=x+dx,ny=y+dy;
+          if(nx>=0&&nx<GRID_W&&ny>=0&&ny<GRID_H&&(grid[nx][ny]===2||grid[nx][ny]===3)) near=true;
+        }
+      if(near) grid[x][y]=1;
+    }
+
+  const stR=rooms.find(r=>r.type==='start');
+  return {grid,rooms,stR,bR,doorTiles};
+}
+
+// ════════════════════════════════════════
+// A* 실시간 난이도
+// ════════════════════════════════════════
+function calcThreat(p){
+  const hpRatio=p.hp/p.maxHp;
+  const dps=p.weaponDps*(1+p.level*.1);
+  const tank=p.maxHp+p.def*3;
+  const spd=p.avgClearTime>0?(1/(p.avgClearTime+1))*100:1;
+  return dps*.4+tank*.003*100+spd*.2-(1-hpRatio)*50;
+}
+function planRoom(p,depth,isBoss){
+  if(isBoss) return {count:1,tier:2,rangedRatio:0};
+  const threat=calcThreat(p);
+  const scale=1+depth*.3+p.floor*.12;
+  let count=Math.max(MIN_MOBS,Math.min(Math.floor(2+(threat/150)*scale)+rInt(-1,1),9));
+  let tier=0;
+  if(threat>250&&depth>=2) tier=1;
+  if(threat>400&&depth>=3&&Math.random()<.3) tier=1;
+  const rangedRatio=p.hp/p.maxHp<.5?.6:.35;
+  return {count,tier,rangedRatio};
+}
+
+// ════════════════════════════════════════
+// 플레이어
+// ════════════════════════════════════════
+class Player{
+  constructor(job){
+    this.jobId=job.id;this.jobName=job.name;this.job=job;
+    this.x=0;this.y=0;
+    this.hp=job.hp;this.maxHp=job.hp;
+    this.atk=job.atk;this.def=job.def;
+    this.baseSpd=job.baseSpd;
+    this.shieldSpd=job.shieldSpd;
+    this.weaponDps=job.atk*2;
+    this.level=1;this.exp=0;this.expNext=100;
+    this.gold=0;this.kills=0;
+    this.atkCd=0;this.invincible=0;
+    this.shieldOn=false;this.runeCharge=0;this.healTimer=0;
+    this.currentRoom=0;this.floor=1;
+    this.avgClearTime=5;this.roomEnterTime=0;
+    this.slashAng=0;this.slashTimer=0;
+    this.burstCount=0;this.burstTimer=0;
+  }
+  get spd(){return this.shieldOn?this.shieldSpd:this.baseSpd;}
+  get dps(){return this.weaponDps*(1+this.level*.1);}
+  addExp(n){
+    this.exp+=n;let lv=false;
+    while(this.exp>=this.expNext){
+      this.exp-=this.expNext;this.level++;this.expNext=Math.floor(this.expNext*1.4);
+      this.maxHp+=20;this.hp=Math.min(this.hp+30,this.maxHp);this.atk+=3;this.weaponDps+=6;lv=true;
+    }
+    return lv;
+  }
+}
+
+// ════════════════════════════════════════
+// 몬스터 팩토리
+// ════════════════════════════════════════
+function makeMob(x,y,tier,attackType,floor,threat){
+  const f=floor,base=threat||100;
+  const statScale=1+(base/200)*.5;
+  const hm=[1,2.8,10][tier],am=[1,2.2,7][tier];
+  const hpBonus=tier===0?1.2:1.0;
+  const baseHp=Math.floor((30+f*16)*hm*statScale*hpBonus);
+  const baseAtk=Math.floor((7+f*4)*am*statScale);
+  const strRatio=Math.min(2,baseHp/(30+f*16));
+  const baseSize={0:TILE-12,1:TILE+6,2:TILE*2+4}[tier];
+  const size=Math.floor(baseSize*(0.85+strRatio*.1));
+  const br=Math.floor(Math.min(200,140*(0.7+strRatio*.3)));
+  let color,glowColor,borderColor;
+  if(tier===0){
+    if(attackType==='melee'){
+      const g=Math.floor(30*(strRatio*.5));
+      color=`rgb(${br},${g},${g})`;glowColor=`${br},${g},${g}`;borderColor=`rgb(${Math.min(255,br+40)},${g},${g})`;
+    } else {
+      const g2=Math.floor(80*(strRatio*.5));
+      color=`rgb(${br},${g2},10)`;glowColor=`${br},${g2},10`;borderColor=`rgb(${Math.min(255,br+30)},${Math.min(200,g2+30)},10)`;
+    }
+  } else if(tier===1){
+    color=attackType==='melee'?'#9b1c6b':'#0e6b7a';
+    glowColor=attackType==='melee'?'155,28,107':'14,107,122';
+    borderColor=attackType==='melee'?'#d946a8':'#22d3ee';
+  } else {
+    color='#4a1080';glowColor='74,16,128';borderColor='#a855f7';
+  }
+  return {
+    x,y,hp:baseHp,maxHp:baseHp,atk:baseAtk,
+    spd:1.0+Math.random()*.6+tier*.2,
+    color,glowColor,borderColor,size,tier,
+    attackType:tier===2?'both':attackType,
+    alive:true,aggro:false,atkCd:0,moveCd:0,roomIdx:-1,
+    shotCd:0,shotInterval:tier===2?1.0:2.2,
+    exp:Math.floor(12*hm*(1+f*.2)),gold:Math.floor(5*hm),
+    // 보스 전용
+    invincible:tier===2?3.0:0, // 보스 입장 3초 무적
+    dashCd:0,
+    hitBy:new Set(), // Multi-hit 방지용
+  };
+}
+
+// ════════════════════════════════════════
+// 파티클
+// ════════════════════════════════════════
+class Particle{
+  constructor(x,y,color,sz=3){
+    this.x=x;this.y=y;this.color=color;
+    const a=Math.random()*6.28,spd=1+Math.random()*4;
+    this.vx=Math.cos(a)*spd;this.vy=Math.sin(a)*spd;
+    this.life=.3+Math.random()*.6;this.maxLife=this.life;
+    this.r=sz*(0.5+Math.random()*.8);
+  }
+}
+
+// ════════════════════════════════════════
+// 게임
+// ════════════════════════════════════════
+class Game{
+  constructor(jobDef,floor,prevPlayer){
+    this.floor=floor;
+    this.themeIdx=Math.min(Math.floor((floor-1)/2),THEMES.length-1);
+    if(this.themeIdx>=3) this.themeIdx=Math.min(this.themeIdx,5);
+    this.player=prevPlayer||new Player(jobDef);
+    this.player.floor=floor;
+    this.jobDef=jobDef;
+    this.enemies=[];this.bullets=[];this.items=[];this.particles=[];
+    this.camX=0;this.camY=0;
+    this.keys={};
+    this.moveDir={x:1,y:0};this.aimDir={x:1,y:0};
+    this.shieldBtn=false;
+    this.clearedRooms=0;this.totalRooms=0;
+    this.done=false;this.pglow=0;this.lastT=performance.now();
+    this.bannerTimer=0;
+    this._build();this._setupUI();this._input();
+    this._raf=requestAnimationFrame(t=>this._loop(t));
+  }
+
+  _build(){
+    const {grid,rooms,stR}=buildDungeon(this.floor);
+    this.grid=grid;this.rooms=rooms;
+    const p=this.player;
+    p.x=stR.px;p.y=stR.py;p.currentRoom=rooms.indexOf(stR);
+    this.camX=p.x-canvas.width/2;this.camY=p.y-canvas.height/2;
+    this.totalRooms=rooms.filter(r=>r.type!=='start'&&r.type!=='shop').length;
+
+    // A* 거리
+    const si=rooms.indexOf(stR);
+    const dist=new Array(rooms.length).fill(Infinity);
+    dist[si]=0;const pq=[[0,si]];
+    while(pq.length){
+      pq.sort((a,b)=>a[0]-b[0]);const[cost,cur]=pq.shift();
+      if(cost>dist[cur]) continue;
+      for(const nb of rooms[cur].adj){const nc=cost+1;if(nc<dist[nb]){dist[nb]=nc;pq.push([nc,nb]);}}
+    }
+
+    rooms.forEach((room,i)=>{
+      if(room.type==='start'||room.type==='shop') return;
+      const isBoss=room.type==='boss';
+      const depth=isFinite(dist[i])?dist[i]:2;
+      const{count,tier,rangedRatio}=planRoom(p,depth,isBoss);
+      for(let k=0;k<count;k++){
+        let ex,ey,tries=0;
+        do{
+          ex=rInt(room.tx+3,room.tx+room.tw-3)*TILE+TILE/2;
+          ey=rInt(room.ty+3,room.ty+room.th-3)*TILE+TILE/2;
+          if(isBoss){ex=room.px;ey=room.py-TILE*3;}
+          tries++;
+        }while(Math.hypot(ex-p.x,ey-p.y)<TILE*3&&tries<10);
+        const isRanged=!isBoss&&Math.random()<rangedRatio;
+        const e=makeMob(ex,ey,tier,isRanged?'ranged':'melee',this.floor,calcThreat(p));
+        e.roomIdx=i;room.enemies.push(this.enemies.length);this.enemies.push(e);
+      }
+      if(isBoss||room.type==='secret'){
+        const n=room.type==='secret'?3:2;
+        for(let k=0;k<n;k++)
+          this.items.push(this._mkItem(rInt(room.tx+3,room.tx+room.tw-3)*TILE+TILE/2,rInt(room.ty+3,room.ty+room.th-3)*TILE+TILE/2));
+      }
+    });
+    // 시작방 문 열기
+    this._openDoorsOf(rooms.indexOf(stR));
+  }
+
+  _mkItem(x,y){
+    const ks=['weapon','armor','potion','rune'];
+    const ns={weapon:['룬검','고대 도끼','마력 단검'],armor:['룬 갑옷','마력 방패','고대 로브'],potion:['체력 물약','강화 물약'],rune:['공격 룬','방어 룬','속도 룬']};
+    const k=ks[rInt(0,ks.length)];
+    return{x,y,kind:k,name:ns[k][rInt(0,ns[k].length)],val:rInt(5,30),collected:false};
+  }
+
+  _setupUI(){
+    const job=this.jobDef;
+    document.getElementById('hud-name').style.color=job.color;
+    document.getElementById('rune-row').style.display=job.hasShield?'flex':'none';
+    document.getElementById('btn-shield').style.display=job.hasShield?'block':'none';
+  }
+
+  // ── 이동 가능 여부 ──
+  walk(wx,wy){
+    const tx=Math.floor(wx/TILE),ty=Math.floor(wy/TILE);
+    if(tx<0||tx>=GRID_W||ty<0||ty>=GRID_H) return false;
+    const t=this.grid[tx][ty];
+    // 1=벽(잠긴문) 통과불가, 0=void 통과불가
+    return t===2||t===3||t===5||t===6||t===7;
+  }
+  eWalk(wx,wy){
+    const tx=Math.floor(wx/TILE),ty=Math.floor(wy/TILE);
+    if(tx<0||tx>=GRID_W||ty<0||ty>=GRID_H) return false;
+    const t=this.grid[tx][ty];
+    return t===2||t===3||t===5||t===7;
+  }
+
+  // ── 방 감지 (가장자리 2칸 안쪽 기준) ──
+  _detectRoom(){
+    const p=this.player;
+    const ptx=Math.floor(p.x/TILE),pty=Math.floor(p.y/TILE);
+    for(let i=0;i<this.rooms.length;i++){
+      if(this.rooms[i].containsDeep(ptx,pty)) return i;
+    }
+    return p.currentRoom;
+  }
+
+  // ── 방 클리어 체크 (alive===true인 적만) ──
+  _checkRoomClear(ri){
+    const room=this.rooms[ri];
+    if(room.cleared||room.type==='start'||room.type==='shop') return;
+    // ★ alive===true 필터 명시 (투사체/파티클 오인 방지)
+    const allDead=room.enemies.every(ei=>{
+      const e=this.enemies[ei];
+      return e&&e.alive===false;
+    });
+    if(!allDead) return;
+    room.cleared=true;this.clearedRooms++;
+    const elapsed=Date.now()/1000-this.player.roomEnterTime;
+    this.player.avgClearTime=this.player.avgClearTime*.7+elapsed*.3;
+    this._openDoorsOf(ri);
+    this._banner(room.type==='boss'?'⚔️ 보스 처치! 포털 개방':'✦ 방 클리어! 문이 열렸습니다');
+    this._ptcl(room.px,room.py,'#fde047',20);
+    if(room.type==='boss') setTimeout(()=>this._clearFloor(),1200);
+  }
+
+  // ── 문 제어 ──
+  // ★ 수정: 잠금 시 1(벽), 해제 시 3(복도/통로)
+  _setDoorTiles(room,val){
+    room.doorList.forEach(d=>{
+      [[d.tx,d.ty],[d.tx+1,d.ty],[d.tx,d.ty+1],[d.tx+1,d.ty+1]].forEach(([x,y])=>{
+        if(x>=0&&x<GRID_W&&y>=0&&y<GRID_H) this.grid[x][y]=val;
+      });
+    });
+  }
+  _openDoorsOf(ri){this._setDoorTiles(this.rooms[ri],3);}
+  _lockDoorsOf(ri){
+    const room=this.rooms[ri];
+    const p=this.player;
+    const ptx=Math.floor(p.x/TILE),pty=Math.floor(p.y/TILE);
+    // ★ 플레이어가 문 타일 위에 있으면 잠금 안 함 (끼임 방지)
+    let playerOnDoor=false;
+    room.doorList.forEach(d=>{
+      [[d.tx,d.ty],[d.tx+1,d.ty],[d.tx,d.ty+1],[d.tx+1,d.ty+1]].forEach(([x,y])=>{
+        if(ptx===x&&pty===y) playerOnDoor=true;
+      });
+    });
+    if(!playerOnDoor) this._setDoorTiles(room,1);
+  }
+
+  _banner(text){
+    this.bannerTimer=2.5;
+    const el=document.getElementById('room-banner');
+    el.textContent=text;el.style.opacity='1';
+  }
+
+  // ════════════════════════════════════════
+  // 입력
+  // ════════════════════════════════════════
+  _input(){
+    this._kh=e=>{this.keys[e.key]=e.type==='keydown';if(e.key===' ') this.shieldBtn=e.type==='keydown';};
+    document.addEventListener('keydown',this._kh);document.addEventListener('keyup',this._kh);
+    const sb=document.getElementById('btn-shield');
+    sb.addEventListener('touchstart',e=>{e.stopPropagation();this.shieldBtn=true;},{passive:true});
+    sb.addEventListener('touchend',e=>{e.stopPropagation();this.shieldBtn=false;},{passive:true});
+    sb.addEventListener('mousedown',e=>{e.stopPropagation();this.shieldBtn=true;});
+    sb.addEventListener('mouseup',e=>{e.stopPropagation();this.shieldBtn=false;});
+
+    const onTS=e=>{
+      e.preventDefault();
+      Array.from(e.changedTouches).forEach(t=>{
+        if(t.clientX<window.innerWidth/2){
+          if(!JOY.active){JOY.active=true;JOY.id=t.identifier;JOY.baseX=t.clientX;JOY.baseY=t.clientY;JOY.dx=0;JOY.dy=0;}
+        } else {
+          if(!RATK.active){RATK.active=true;RATK.id=t.identifier;this._updateAim(t.clientX,t.clientY);}
+        }
+      });
+    };
+    const onTM=e=>{
+      e.preventDefault();
+      Array.from(e.changedTouches).forEach(t=>{
+        if(t.identifier===JOY.id){
+          let dx=t.clientX-JOY.baseX,dy=t.clientY-JOY.baseY;
+          const mag=Math.hypot(dx,dy);
+          if(mag>JOY.MAX_R){dx=dx/mag*JOY.MAX_R;dy=dy/mag*JOY.MAX_R;}
+          JOY.dx=dx/JOY.MAX_R;JOY.dy=dy/JOY.MAX_R;
+        }
+        if(t.identifier===RATK.id) this._updateAim(t.clientX,t.clientY);
+      });
+    };
+    const onTE=e=>{
+      Array.from(e.changedTouches).forEach(t=>{
+        if(t.identifier===JOY.id){JOY.active=false;JOY.id=-1;JOY.dx=0;JOY.dy=0;}
+        if(t.identifier===RATK.id){RATK.active=false;RATK.id=-1;}
+      });
+    };
+    let mDown=false;
+    const onMM=e=>this._updateAim(e.clientX,e.clientY);
+    const onMD=e=>{mDown=true;this._updateAim(e.clientX,e.clientY);};
+    const onMU=()=>mDown=false;
+
+    document.addEventListener('touchstart',onTS,{passive:false});
+    document.addEventListener('touchmove',onTM,{passive:false});
+    document.addEventListener('touchend',onTE,{passive:false});
+    document.addEventListener('mousemove',onMM);
+    document.addEventListener('mousedown',onMD);
+    document.addEventListener('mouseup',onMU);
+
+    this._attacking=()=>RATK.active||mDown;
+    this._unbindFns=[
+      ()=>document.removeEventListener('keydown',this._kh),
+      ()=>document.removeEventListener('keyup',this._kh),
+      ()=>document.removeEventListener('touchstart',onTS),
+      ()=>document.removeEventListener('touchmove',onTM),
+      ()=>document.removeEventListener('touchend',onTE),
+      ()=>document.removeEventListener('mousemove',onMM),
+      ()=>document.removeEventListener('mousedown',onMD),
+      ()=>document.removeEventListener('mouseup',onMU),
+    ];
+  }
+  _updateAim(cx,cy){
+    const p=this.player;
+    const dx=cx+this.camX-p.x,dy=cy+this.camY-p.y;
+    const mag=Math.hypot(dx,dy);
+    if(mag>1) this.aimDir={x:dx/mag,y:dy/mag};
+  }
+  _unbind(){this._unbindFns.forEach(f=>f());JOY.active=false;JOY.dx=0;JOY.dy=0;RATK.active=false;}
+
+  _loop(now){
+    if(this.done) return;
+    const dt=Math.min((now-this.lastT)/1000,.05);
+    this.lastT=now;
+    this._update(dt);this._draw();this._drawJoy();
+    this._raf=requestAnimationFrame(t=>this._loop(t));
+  }
+
+  _update(dt){
+    const p=this.player;
+
+    // 이동
+    let dx=JOY.dx,dy=JOY.dy;
+    if(!JOY.active){
+      if(this.keys['a']||this.keys['ArrowLeft']) dx-=1;
+      if(this.keys['d']||this.keys['ArrowRight']) dx+=1;
+      if(this.keys['w']||this.keys['ArrowUp']) dy-=1;
+      if(this.keys['s']||this.keys['ArrowDown']) dy+=1;
+      const km=Math.hypot(dx,dy);if(km>1){dx/=km;dy/=km;}
+    }
+    if(Math.hypot(dx,dy)>0.1) this.moveDir={x:dx,y:dy};
+    const nx=p.x+dx*p.spd*TILE*dt,ny=p.y+dy*p.spd*TILE*dt;
+    if(this.walk(nx,p.y)) p.x=nx;
+    if(this.walk(p.x,ny)) p.y=ny;
+
+    p.shieldOn=(p.jobId==='tank')&&this.shieldBtn;
+    if(p.jobId==='tank') p.runeCharge=Math.min(p.runeCharge+dt*25,100);
+    if(p.jobId==='healer'&&p.hp<p.maxHp){p.healTimer+=dt;if(p.healTimer>3){p.hp=Math.min(p.hp+8,p.maxHp);p.healTimer=0;}}
+
+    // 공격
+    p.atkCd=Math.max(0,p.atkCd-dt);
+    if(p.slashTimer>0) p.slashTimer=Math.max(0,p.slashTimer-dt);
+    if(p.burstCount>0){
+      p.burstTimer-=dt;
+      if(p.burstTimer<=0){this._fireBullet(p,this.aimDir.x,this.aimDir.y,false);p.burstCount--;p.burstTimer=.1;}
+    }
+    if(this._attacking()&&p.atkCd<=0) this._attack();
+    p.invincible=Math.max(0,p.invincible-dt);
+
+    // 방 감지 (안쪽 2칸 기준)
+    const curRoom=this._detectRoom();
+    if(curRoom!==p.currentRoom){
+      p.currentRoom=curRoom;p.roomEnterTime=Date.now()/1000;
+      const room=this.rooms[curRoom];
+      if(!room.cleared&&room.type!=='start'&&room.type!=='shop'){
+        const hasE=room.enemies.some(ei=>this.enemies[ei]&&this.enemies[ei].alive===true);
+        if(hasE){
+          this._lockDoorsOf(curRoom);
+          this._banner('⚠️ 적을 모두 처치하세요!');
+          room.enemies.forEach(ei=>{if(this.enemies[ei]) this.enemies[ei].aggro=true;});
+        }
+      }
+      room.visited=true;
+    }
+
+    // 적 업데이트 (보스 무적 타이머)
+    this.enemies.forEach(e=>{if(e.alive) this._ue(e,dt);});
+
+    // 매 프레임 시작 시 투사체 hitBy 초기화 (Multi-hit 방지)
+    this.bullets.forEach(b=>{if(b.frameHit) b.frameHit=false;});
+
+    // 투사체
+    this.bullets=this.bullets.filter(b=>{
+      b.x+=b.vx;b.y+=b.vy;b.life-=dt;
+      if(b.life<=0) return false;
+      const tx=Math.floor(b.x/TILE),ty=Math.floor(b.y/TILE);
+      if(tx<0||tx>=GRID_W||ty<0||ty>=GRID_H) return false;
+      const t=this.grid[tx][ty];
+      if(t===0||t===1){this._ptcl(b.x,b.y,b.col,3);return false;}
+      if(b.own==='player'){
+        let killed=false;
+        for(const e of this.enemies){
+          if(!e.alive||e.alive!==true) continue;
+          // ★ Multi-hit 방지: 이미 이 투사체에 맞은 적은 건너뜀
+          if(b.hitSet&&b.hitSet.has(e)) continue;
+          if(Math.hypot(e.x-b.x,e.y-b.y)<e.size/2+4){
+            // 보스 무적 중이면 데미지 0
+            if(e.invincible>0){this._ptcl(e.x,e.y,'#888',3);if(!b.pierce) return false;continue;}
+            if(!b.hitSet) b.hitSet=new Set();
+            b.hitSet.add(e);
+            this._hitE(e,b.dmg,b.size||5);
+            if(!b.pierce) return false;
+          }
+        }
+      } else {
+        if(Math.hypot(p.x-b.x,p.y-b.y)<TILE/2+4&&p.invincible<=0){
+          let dmg=Math.max(1,b.dmg-Math.floor(p.def/3));
+          if(p.shieldOn){
+            dmg=Math.floor(dmg*0.55);
+            this._ptcl(p.x,p.y,p.job.color,6);
+            if(Math.random()<.07){p.invincible=1.0;this._msg('⚡ 룬 무적!',p.job.color);}
+          }
+          if(p.invincible<=0){
+            p.hp-=dmg;p.invincible=.3;this._ptcl(p.x,p.y,'#ef4444',5);
+            if(p.hp<=0){this._die();return false;}
+          }
+          return false;
+        }
+      }
+      return true;
+    });
+
+    this.items.forEach(it=>{
+      if(it.collected) return;
+      if(Math.hypot(p.x-it.x,p.y-it.y)<TILE*1.1) this._collect(it);
+    });
+
+    this._checkRoomClear(p.currentRoom);
+
+    this.particles=this.particles.filter(pt=>{
+      pt.life-=dt;pt.x+=pt.vx;pt.y+=pt.vy;pt.vy+=35*dt;return pt.life>0;
+    });
+
+    if(this.bannerTimer>0){this.bannerTimer-=dt;if(this.bannerTimer<=0) document.getElementById('room-banner').style.opacity='0';}
+    this.pglow=(this.pglow+dt*3)%(Math.PI*2);
+    this.camX+=(p.x-canvas.width/2-this.camX)*8*dt;
+    this.camY+=(p.y-canvas.height/2-this.camY)*8*dt;
+    this._hud();
+  }
+
+  _attack(){
+    const p=this.player;
+    let ax=this.aimDir.x,ay=this.aimDir.y;
+    if(Math.hypot(ax,ay)<0.1){ax=this.moveDir.x;ay=this.moveDir.y;}
+
+    if(p.jobId==='tank'||p.jobId==='warrior'){
+      const isTank=p.jobId==='tank';
+      const atkRange=isTank?TILE*2.2:TILE*72/TILE*TILE/TILE*2; // 전사 72픽셀
+      const atkAngle=isTank?Math.PI*.5:Math.PI*.65;
+      const baseAng=Math.atan2(ay,ax);
+      p.slashAng=baseAng;p.slashTimer=.25;
+      this.enemies.forEach(e=>{
+        if(!e.alive||e.alive!==true) return;
+        if(e.invincible>0) return; // 보스 무적 중 근접도 막기
+        const ex=e.x-p.x,ey=e.y-p.y;
+        if(Math.hypot(ex,ey)>atkRange+e.size/2) return;
+        let diff=Math.abs(Math.atan2(ey,ex)-baseAng);
+        if(diff>Math.PI) diff=Math.PI*2-diff;
+        if(diff<atkAngle/2){
+          const dmg=Math.floor(p.atk*(1+p.level*.05)*(isTank?1.0:1.0));
+          this._hitE(e,dmg,0);
+        }
+      });
+      this._ptcl(p.x+ax*TILE,p.y+ay*TILE,p.job.color,4);
+      // 탱커 공속: atkCd 1.0 (공속 1)
+      p.atkCd=isTank?1.0:.38;
+    } else {
+      const isMage=p.jobId==='mage',isArcher=p.jobId==='archer';
+      if(isMage&&Math.random()<.12){
+        this._fireBullet(p,ax,ay,true,1.5);
+      } else {
+        this._fireBullet(p,ax,ay,false);
+      }
+      if(isArcher&&Math.random()<.10&&p.burstCount===0){p.burstCount=2;p.burstTimer=.1;}
+      p.atkCd=isMage?.36:isArcher?.25:.38;
+    }
+  }
+
+  _fireBullet(p,ax,ay,isCrit,scale=1){
+    const spd=p.jobId==='archer'?10:7.5;
+    const dmg=Math.floor(p.atk*(1+p.level*.05)*scale);
+    const size=(p.jobId==='mage'?8:5)*scale;
+    this.bullets.push({
+      x:p.x,y:p.y,vx:ax*spd,vy:ay*spd,dmg,
+      own:'player',col:isCrit?'#ffffff':p.job.color,
+      life:p.jobId==='archer'?1.6:1.2,
+      pierce:p.jobId==='mage',size,
+      hitSet:new Set(),
+    });
+    this._ptcl(p.x,p.y,isCrit?'#fff':p.job.color,isCrit?8:3);
+  }
+
+  _ue(e,dt){
+    const p=this.player;
+    // 보스 무적 타이머
+    if(e.invincible>0){
+      e.invincible=Math.max(0,e.invincible-dt);
+      // ★ 무적 중에도 물리 충돌(밀어내기)은 유지: 플레이어가 보스 위에 올라가지 못하게
+      const d=Math.hypot(p.x-e.x,p.y-e.y);
+      if(d<e.size/2+TILE/2){
+        const ang=Math.atan2(p.y-e.y,p.x-e.x);
+        p.x=e.x+Math.cos(ang)*(e.size/2+TILE/2+2);
+        p.y=e.y+Math.sin(ang)*(e.size/2+TILE/2+2);
+      }
+      return; // 무적 중엔 이동/공격 안 함
+    }
+    if(e.roomIdx!==p.currentRoom&&!e.aggro) return;
+    const d=Math.hypot(p.x-e.x,p.y-e.y);
+    if(d<360) e.aggro=true;
+    if(!e.aggro) return;
+    e.moveCd+=dt;if(e.moveCd<.04) return;e.moveCd=0;
+    const isR=e.attackType==='ranged'||e.attackType==='both';
+    const keepDist=isR?TILE*4.5:TILE*1.2;
+    if(d>keepDist+e.size){
+      const ddx=(p.x-e.x)/d,ddy=(p.y-e.y)/d,spd=e.spd*TILE*.04;
+      if(this.eWalk(e.x+ddx*spd,e.y)) e.x+=ddx*spd;
+      if(this.eWalk(e.x,e.y+ddy*spd)) e.y+=ddy*spd;
+    } else if(isR&&d<keepDist-TILE){
+      const ddx=(p.x-e.x)/d,ddy=(p.y-e.y)/d,spd=e.spd*TILE*.03;
+      if(this.eWalk(e.x-ddx*spd,e.y)) e.x-=ddx*spd;
+      if(this.eWalk(e.x,e.y-ddy*spd)) e.y-=ddy*spd;
+    }
+    e.atkCd=Math.max(0,e.atkCd-dt);
+    if((e.attackType==='melee'||e.attackType==='both')&&d<TILE*1.5&&e.atkCd<=0){
+      let dmg=Math.max(1,e.atk-Math.floor(p.def/4));
+      if(p.shieldOn){dmg=Math.floor(dmg*0.55);if(Math.random()<.07){p.invincible=1.0;this._msg('⚡ 룬 무적!',p.job.color);}}
+      p.hp-=dmg;this._ptcl(p.x,p.y,'#ef4444',4);e.atkCd=e.tier===2?.7:1.0;
+      if(p.invincible<=0) p.invincible=.3;
+      if(p.hp<=0) this._die();
+    }
+    e.shotCd=Math.max(0,e.shotCd-dt);
+    if(isR&&d<TILE*7&&e.shotCd<=0){
+      const ddx=(p.x-e.x)/d,ddy=(p.y-e.y)/d;
+      const shots=e.tier===2?3:1;
+      for(let s=0;s<shots;s++){
+        const spread=(s-Math.floor(shots/2))*.28;
+        const ang=Math.atan2(ddy,ddx)+spread;
+        this.bullets.push({x:e.x,y:e.y,vx:Math.cos(ang)*(e.tier===2?6.5:5),vy:Math.sin(ang)*(e.tier===2?6.5:5),
+          dmg:Math.floor(e.atk*.55),own:'enemy',col:e.tier===2?'#d946ef':e.tier===1?'#22d3ee':'#f97316',
+          life:1.8,pierce:false,size:5,hitSet:new Set()});
+      }
+      e.shotCd=e.shotInterval;this._ptcl(e.x,e.y,'#f97316',4);
+    }
+    // 보스 대시
+    if(e.tier===2){
+      e.dashCd=Math.max(0,e.dashCd-dt);
+      if(e.dashCd<=0&&d<TILE*6&&d>TILE*2){
+        const ddx=(p.x-e.x)/d,ddy=(p.y-e.y)/d;
+        e.x+=ddx*TILE*3;e.y+=ddy*TILE*3;
+        e.dashCd=4+Math.random()*2;this._ptcl(e.x,e.y,'#d946ef',12);
+      }
+    }
+  }
+
+  _hitE(e,dmg){
+    e.hp-=dmg;this._ptcl(e.x,e.y,'#fbbf24',4);
+    if(e.hp<=0){
+      e.alive=false;this.player.kills++;
+      const lv=this.player.addExp(e.exp);
+      this.player.gold+=e.gold;this._ptcl(e.x,e.y,'#fde047',8);
+      if(lv) this._msg(`레벨 업! Lv.${this.player.level}`,this.player.job.color);
+    }
+    if(this.player.jobId==='archer'&&Math.random()<.07){this.player.invincible=1.0;this._msg('💨 회피!',this.player.job.color);}
+  }
+
+  _collect(it){
+    it.collected=true;const p=this.player;
+    if(it.kind==='weapon'){p.atk+=it.val;p.weaponDps+=it.val*2;this._msg(`⚔️ ${it.name} (+${it.val} 공격력)`,'#a78bfa');}
+    else if(it.kind==='armor'){p.def+=it.val;p.maxHp+=it.val;this._msg(`🛡️ ${it.name} (+${it.val} 방어력)`,'#7dd3fc');}
+    else if(it.kind==='potion'){p.hp=Math.min(p.hp+it.val*5,p.maxHp);this._msg(`💚 ${it.name} (HP +${it.val*5})`,'#22c55e');}
+    else{p.atk+=Math.floor(it.val/2);p.def+=Math.floor(it.val/2);this._msg(`✨ ${it.name} 획득!`,'#6eb5ff');}
+    this._ptcl(it.x,it.y,'#fde047',10);
+  }
+
+  _ptcl(x,y,color,n=6){for(let i=0;i<n;i++) this.particles.push(new Particle(x,y,color));}
+  _msg(text,color='#c4b5e8'){
+    const d=document.createElement('div');d.className='msg';d.style.color=color;d.textContent=text;
+    document.getElementById('messages').appendChild(d);setTimeout(()=>d.remove(),2700);
+  }
+
+  _die(){
+    this.done=true;this._unbind();cancelAnimationFrame(this._raf);
+    const p=this.player;
+    document.getElementById('dead-stats').innerHTML=`도달 층: <b style="color:#a78bfa">B${this.floor}F</b><br>레벨: <b style="color:${p.job.color}">${p.level}</b> · 킬: <b>${p.kills}</b> · 골드: <b style="color:#d4a017">${p.gold}</b>`;
+    document.getElementById('screen-dead').classList.remove('hidden');
+  }
+  _clearFloor(){
+    this.done=true;this._unbind();cancelAnimationFrame(this._raf);
+    const p=this.player;
+    const nt=THEMES[Math.min(Math.floor(this.floor/2),THEMES.length-1)];
+    document.getElementById('clear-title').textContent=`B${this.floor}F 클리어!`;
+    document.getElementById('clear-sub').textContent=`다음 테마: ${nt.name}`;
+    document.getElementById('clear-stats').innerHTML=`레벨 <b style="color:${p.job.color}">${p.level}</b> · 킬 <b>${p.kills}</b> · 골드 <b style="color:#d4a017">${p.gold}</b><br>HP <b style="color:#22c55e">${p.hp}/${p.maxHp}</b> · ATK <b>${p.atk}</b> · DEF <b>${p.def}</b>`;
+    document.getElementById('screen-clear').classList.remove('hidden');
+  }
+
+  _hud(){
+    const p=this.player,th=THEMES[this.themeIdx];
+    document.getElementById('hud-name').textContent=`${p.jobName} · Lv.${p.level}`;
+    document.getElementById('bar-hp').style.width=Math.max(0,p.hp/p.maxHp*100)+'%';
+    document.getElementById('hp-text').textContent=`${Math.max(0,p.hp)}/${p.maxHp}`;
+    document.getElementById('bar-exp').style.width=(p.exp/p.expNext*100)+'%';
+    document.getElementById('bar-rune').style.width=p.runeCharge+'%';
+    document.getElementById('hud-gold').textContent=p.gold;
+    document.getElementById('hud-kills').textContent=p.kills;
+    document.getElementById('hud-atk').textContent=p.atk;
+    document.getElementById('floor-num').textContent=`B${this.floor}F`;
+    document.getElementById('floor-theme').textContent=th.name;
+    document.getElementById('floor-theme').style.color=th.acc;
+    const cl=this.rooms.filter(r=>r.cleared&&r.type!=='start'&&r.type!=='shop').length;
+    document.getElementById('floor-kills').textContent=`방 ${cl}/${this.totalRooms}`;
+  }
+
+  // ════════════════════════════════════════
+  // 조이스틱 UI
+  // ════════════════════════════════════════
+  _drawJoy(){
+    uctx.clearRect(0,0,uic.width,uic.height);
+    if(!JOY.active) return;
+    const{baseX,baseY,MAX_R,dx,dy}=JOY;
+    const sx=baseX+dx*MAX_R,sy=baseY+dy*MAX_R;
+    uctx.beginPath();uctx.arc(baseX,baseY,MAX_R,0,6.28);
+    uctx.fillStyle='rgba(0,0,0,.22)';uctx.fill();
+    uctx.strokeStyle='rgba(255,255,255,.2)';uctx.lineWidth=2;uctx.stroke();
+    uctx.beginPath();uctx.arc(sx,sy,24,0,6.28);
+    uctx.fillStyle='rgba(255,255,255,.32)';uctx.fill();
+    uctx.strokeStyle='rgba(255,255,255,.55)';uctx.lineWidth=2;uctx.stroke();
+  }
+
+  // ════════════════════════════════════════
+  // 렌더링
+  // ════════════════════════════════════════
+  _draw(){
+    const W=canvas.width,H=canvas.height,th=THEMES[this.themeIdx];
+    const p=this.player;
+    ctx.fillStyle='#07050f';ctx.fillRect(0,0,W,H);
+    const cx=Math.floor(this.camX),cy=Math.floor(this.camY);
+    const tx0=Math.max(0,Math.floor(cx/TILE)-1),ty0=Math.max(0,Math.floor(cy/TILE)-1);
+    const tx1=Math.min(GRID_W,tx0+Math.ceil(W/TILE)+3),ty1=Math.min(GRID_H,ty0+Math.ceil(H/TILE)+3);
+
+    for(let tx=tx0;tx<tx1;tx++) for(let ty=ty0;ty<ty1;ty++){
+      const t=this.grid[tx][ty];if(t===0) continue;
+      const sx=tx*TILE-cx,sy=ty*TILE-cy;
+      if(t===1){
+        // 잠긴 문 (벽처럼 표시 + 빨간 테두리)
+        ctx.fillStyle='#1a0f2e';ctx.fillRect(sx,sy,TILE,TILE);
+        ctx.strokeStyle='#ef4444';ctx.lineWidth=2;ctx.strokeRect(sx+3,sy+3,TILE-6,TILE-6);
+        ctx.fillStyle='#ef4444';ctx.beginPath();ctx.arc(sx+TILE/2,sy+TILE/2,3,0,6.28);ctx.fill();
+      } else if(t===2){
+        ctx.fillStyle=th.floor;ctx.fillRect(sx,sy,TILE,TILE);
+        ctx.strokeStyle=th.floor2;ctx.lineWidth=.4;ctx.strokeRect(sx+.5,sy+.5,TILE-1,TILE-1);
+      } else if(t===3){
+        ctx.fillStyle=th.floor;ctx.fillRect(sx,sy,TILE,TILE);
+      } else if(t===5){
+        // 열린 문 (점선)
+        ctx.fillStyle=th.floor;ctx.fillRect(sx,sy,TILE,TILE);
+        ctx.strokeStyle=th.acc;ctx.lineWidth=1;ctx.setLineDash([3,3]);
+        ctx.strokeRect(sx+1,sy+1,TILE-2,TILE-2);ctx.setLineDash([]);
+      } else if(t===6){
+        ctx.fillStyle=th.floor;ctx.fillRect(sx,sy,TILE,TILE);
+        const r=10+Math.sin(this.pglow)*4;
+        const g=ctx.createRadialGradient(sx+TILE/2,sy+TILE/2,0,sx+TILE/2,sy+TILE/2,r);
+        g.addColorStop(0,`rgba(${th.rgb},.9)`);g.addColorStop(1,`rgba(${th.rgb},0)`);
+        ctx.fillStyle=g;ctx.beginPath();ctx.arc(sx+TILE/2,sy+TILE/2,r,0,6.28);ctx.fill();
+        ctx.strokeStyle=th.acc;ctx.lineWidth=2;ctx.beginPath();ctx.arc(sx+TILE/2,sy+TILE/2,r+2,0,6.28);ctx.stroke();
+      } else if(t===7){
+        ctx.fillStyle=th.floor;ctx.fillRect(sx,sy,TILE,TILE);
+        ctx.fillStyle='#d4a017';ctx.beginPath();ctx.arc(sx+TILE/2,sy+TILE/2,8,0,6.28);ctx.fill();
+      }
+    }
+
+    const now=Date.now()/1000;
+    this.items.forEach(it=>{
+      if(it.collected) return;
+      const sx=it.x-cx,sy=it.y-cy+Math.sin(now*3)*3;
+      const cols={weapon:'#a78bfa',armor:'#7dd3fc',potion:'#22c55e',rune:'#fde047'};
+      const c=cols[it.kind];
+      ctx.shadowColor=c;ctx.shadowBlur=10;
+      ctx.fillStyle=c;ctx.beginPath();ctx.arc(sx,sy,8,0,6.28);ctx.fill();
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(sx,sy,3,0,6.28);ctx.fill();
+      ctx.shadowBlur=0;
+    });
+
+    this.particles.forEach(pt=>{
+      ctx.globalAlpha=Math.max(0,pt.life/pt.maxLife);
+      ctx.fillStyle=pt.color;ctx.beginPath();ctx.arc(pt.x-cx,pt.y-cy,pt.r,0,6.28);ctx.fill();
+    });ctx.globalAlpha=1;
+
+    this.bullets.forEach(b=>{
+      const bs=b.size||5;
+      ctx.shadowColor=b.col;ctx.shadowBlur=8;
+      ctx.fillStyle=b.col;ctx.beginPath();ctx.arc(b.x-cx,b.y-cy,bs,0,6.28);ctx.fill();
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(b.x-cx,b.y-cy,bs*.35,0,6.28);ctx.fill();
+      ctx.shadowBlur=0;
+    });
+
+    this.enemies.forEach(e=>{
+      if(!e.alive) return;
+      const ex=e.x-cx,ey=e.y-cy,half=e.size/2;
+      ctx.fillStyle='rgba(0,0,0,.45)';
+      ctx.beginPath();ctx.ellipse(ex,ey+half,half,half/6,0,0,6.28);ctx.fill();
+      if(e.tier>=1){
+        const ar=half+6+Math.sin(now*3)*3;
+        const ag=ctx.createRadialGradient(ex,ey,half*.5,ex,ey,ar+4);
+        ag.addColorStop(0,`rgba(${e.glowColor},.28)`);ag.addColorStop(1,`rgba(${e.glowColor},0)`);
+        ctx.fillStyle=ag;ctx.beginPath();ctx.arc(ex,ey,ar+4,0,6.28);ctx.fill();
+      }
+      if(e.tier===2){
+        ctx.strokeStyle=`rgba(${e.glowColor},${.3+Math.sin(now*4)*.15})`;
+        ctx.lineWidth=3;ctx.beginPath();ctx.arc(ex,ey,half+10,0,6.28);ctx.stroke();
+        // 무적 중 흰색 깜빡임
+        if(e.invincible>0&&Math.floor(now*6)%2===0){
+          ctx.fillStyle='rgba(255,255,255,.3)';
+          ctx.beginPath();ctx.arc(ex,ey,half+14,0,6.28);ctx.fill();
+        }
+      }
+      ctx.shadowColor=e.color;ctx.shadowBlur=e.tier===2?20:e.tier===1?12:3;
+      ctx.fillStyle=e.color;
+      const rad=e.tier===2?half*.4:e.tier===1?8:5;
+      ctx.beginPath();ctx.roundRect(ex-half,ey-half,e.size,e.size,rad);ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.strokeStyle=e.borderColor;ctx.lineWidth=e.tier===2?3:2;
+      ctx.beginPath();ctx.roundRect(ex-half,ey-half,e.size,e.size,rad);ctx.stroke();
+      if(e.attackType==='ranged'||e.attackType==='both'){
+        ctx.fillStyle=e.tier===2?'#d946ef':'#22d3ee';
+        ctx.beginPath();ctx.arc(ex,ey-half+7,4,0,6.28);ctx.fill();
+      }
+      ctx.fillStyle='rgba(0,0,0,.65)';ctx.fillRect(ex-half,ey-half-10,e.size,6);
+      ctx.fillStyle=e.tier===2?'#d946ef':e.tier===1?'#d4a017':'#22c55e';
+      ctx.fillRect(ex-half,ey-half-10,e.size*Math.max(0,e.hp/e.maxHp),6);
+      if(e.tier>=1){
+        const lbl=e.tier===2?(e.invincible>0?'BOSS ✦무적✦':'BOSS'):'ELITE';
+        ctx.fillStyle=e.tier===2&&e.invincible>0?'#fff':e.borderColor;
+        ctx.font=`${e.tier===2?12:10}px sans-serif`;ctx.textAlign='center';
+        ctx.fillText(lbl,ex,ey-half-14);
+      }
+    });
+
+    const px=p.x-cx,py=p.y-cy;
+    ctx.fillStyle='rgba(0,0,0,.5)';
+    ctx.beginPath();ctx.ellipse(px,py+TILE/2-2,TILE/2-2,TILE/10,0,0,6.28);ctx.fill();
+
+    if(p.slashTimer>0&&(p.jobId==='tank'||p.jobId==='warrior')){
+      const prog=1-p.slashTimer/.25;
+      const atkAngle=p.jobId==='tank'?Math.PI*.5:Math.PI*.65;
+      const atkRange=p.jobId==='tank'?TILE*2.2:TILE*2;
+      ctx.save();ctx.globalAlpha=(1-prog)*.55;ctx.fillStyle=p.job.color;
+      ctx.beginPath();ctx.moveTo(px,py);
+      ctx.arc(px,py,atkRange*(prog*.5+.5),p.slashAng-atkAngle/2,p.slashAng+atkAngle/2);
+      ctx.closePath();ctx.fill();ctx.globalAlpha=1;ctx.restore();
+    }
+
+    if(p.shieldOn){
+      const r=TILE+Math.sin(now*8)*3;
+      const g=ctx.createRadialGradient(px,py,0,px,py,r);
+      g.addColorStop(0,`rgba(${p.job.colorGlow},.15)`);g.addColorStop(1,`rgba(${p.job.colorGlow},0)`);
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(px,py,r,0,6.28);ctx.fill();
+      ctx.strokeStyle=`rgba(${p.job.colorGlow},.8)`;ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(px,py,r,0,6.28);ctx.stroke();
+    }
+
+    const blink=p.invincible>0&&Math.floor(now*10)%2===0;
+    if(!blink){
+      ctx.shadowColor=p.job.color;ctx.shadowBlur=16;
+      ctx.fillStyle=p.job.colorDark;
+      ctx.beginPath();ctx.roundRect(px-TILE/2+3,py-TILE/2+3,TILE-6,TILE-6,7);ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.strokeStyle=p.job.color;ctx.lineWidth=2;
+      ctx.beginPath();ctx.roundRect(px-TILE/2+3,py-TILE/2+3,TILE-6,TILE-6,7);ctx.stroke();
+      ctx.fillStyle=p.job.color;ctx.globalAlpha=.7;
+      ctx.beginPath();ctx.arc(px,py,4,0,6.28);ctx.fill();ctx.globalAlpha=1;
+    }
+    ctx.textAlign='left';
+  }
+}
+
+// ════════════════════════════════════════
+// 화면 전환
+// ════════════════════════════════════════
+let selJob=JOBS[0],curGame=null;
+
+function showJobSelect(){
+  document.getElementById('screen-lobby').classList.add('hidden');
+  document.getElementById('screen-job').classList.remove('hidden');
+  const list=document.getElementById('job-list');list.innerHTML='';
+  JOBS.forEach(job=>{
+    const card=document.createElement('div');
+    card.className='job-card'+(job===selJob?' selected':'');
+    card.style.borderColor=job===selJob?job.color:'rgba(255,255,255,.1)';
+    card.innerHTML=`<div class="job-icon" style="background:${job.colorDark}25;border:1px solid ${job.color}40">${job.icon}</div><div class="job-info"><h3 style="color:${job.color}">${job.name}</h3><p>${job.desc}</p></div>`;
+    card.onclick=()=>{
+      selJob=job;
+      document.querySelectorAll('.job-card').forEach(c=>{c.classList.remove('selected');c.style.borderColor='rgba(255,255,255,.1)';});
+      card.classList.add('selected');card.style.borderColor=job.color;
+    };
+    list.appendChild(card);
+  });
+}
+
+function startGame(){
+  document.getElementById('screen-job').classList.add('hidden');
+  if(curGame){curGame._unbind();cancelAnimationFrame(curGame._raf);}
+  curGame=new Game(selJob,1,null);
+}
+function nextFloor(){
+  document.getElementById('screen-clear').classList.add('hidden');
+  const p=curGame.player,f=curGame.floor+1;
+  curGame=new Game(selJob,f,p);
+}
+function goLobby(){
+  ['screen-clear','screen-dead','screen-job'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  document.getElementById('screen-lobby').classList.remove('hidden');
+  if(curGame){curGame._unbind();cancelAnimationFrame(curGame._raf);curGame=null;}
+  uctx.clearRect(0,0,uic.width,uic.height);
+}
+</script>
+</body>
+</html>
